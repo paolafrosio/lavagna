@@ -1,0 +1,2917 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lavagna Collaborativa Digitale • CPIA</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PeerJS per sincronizzazione diretta tra docente e studenti -->
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <!-- Icone Lucide -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Font Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .board-grid {
+            background-color: #f8fafc;
+            background-image: radial-gradient(#cbd5e1 1.25px, transparent 1.25px);
+            background-size: 28px 28px;
+        }
+        .sticky-note {
+            min-width: 170px;
+            min-height: 120px;
+            transition: box-shadow 0.15s ease, transform 0.1s ease;
+            touch-action: none;
+        }
+        .board-item {
+            touch-action: none;
+        }
+        .sticky-note:active, .board-item:active {
+            cursor: grabbing;
+            z-index: 999 !important;
+        }
+        .is-dragging {
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.15) !important;
+            transform: scale(1.03) rotate(1deg);
+        }
+        .vector-item {
+            pointer-events: auto;
+            cursor: pointer;
+            transition: opacity 0.15s ease;
+        }
+        .vector-item:hover {
+            opacity: 0.55;
+        }
+        .vector-shape-group {
+            pointer-events: auto;
+            cursor: pointer;
+        }
+        .vector-shape-group:hover {
+            opacity: 0.65;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 h-screen w-screen flex flex-col">
+
+    <!-- SCHERMATA INIZIALE DI ACCESSO -->
+    <div id="setup-modal" class="fixed inset-0 z-50 bg-slate-900/75 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200">
+            <div class="bg-gradient-to-r from-indigo-600 to-blue-600 p-6 text-white">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="bg-white/20 p-2.5 rounded-2xl">
+                        <i data-lucide="layout-grid" class="w-7 h-7 text-white"></i>
+                    </div>
+                    <div>
+                        <span class="text-xs font-bold uppercase tracking-wider text-indigo-100">Spazio Collaborativo di Classe</span>
+                        <h1 class="text-2xl font-extrabold leading-tight">Lavagna Interattiva</h1>
+                    </div>
+                </div>
+                <p class="text-indigo-100 text-sm mt-1">
+                    Condividi idee, post-it, schemi e immagini in tempo reale tra la LIM e i dispositivi degli studenti.
+                </p>
+            </div>
+
+            <div class="p-6 space-y-5">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">1. Chi sta entrando?</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button type="button" id="btn-role-teacher" onclick="selectRole('teacher')"
+                            class="flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-indigo-600 bg-indigo-50 text-indigo-700 font-bold transition-all cursor-pointer">
+                            <i data-lucide="presentation" class="w-6 h-6 mb-1.5"></i>
+                            <span>Docente (LIM)</span>
+                            <span class="text-[11px] font-normal text-indigo-500 mt-0.5">Crea la stanza</span>
+                        </button>
+                        <button type="button" id="btn-role-student" onclick="selectRole('student')"
+                            class="flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-slate-200 hover:border-indigo-300 text-slate-600 font-bold transition-all cursor-pointer">
+                            <i data-lucide="smartphone" class="w-6 h-6 mb-1.5"></i>
+                            <span>Studente</span>
+                            <span class="text-[11px] font-normal text-slate-400 mt-0.5">Entra con codice</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="input-user-name" class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">2. Il tuo nome</label>
+                    <input type="text" id="input-user-name" placeholder="Es. Prof.ssa Rossi oppure Amina"
+                        class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none text-slate-800 font-medium">
+                </div>
+
+                <div id="student-room-field" class="hidden">
+                    <label for="input-room-code" class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">3. Codice della Stanza (mostrato sulla LIM)</label>
+                    <input type="text" id="input-room-code" placeholder="Es. CPIA-482" maxlength="12"
+                        class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none text-slate-800 font-bold uppercase tracking-widest">
+                </div>
+
+                <button type="button" onclick="enterBoard()"
+                    class="w-full py-3.5 px-6 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white font-bold text-base shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2 cursor-pointer">
+                    <span>Entra nella Lavagna</span>
+                    <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- BARRA SUPERIORE (HEADER) -->
+    <header class="bg-white border-b border-slate-200 px-3 sm:px-5 py-2.5 flex items-center justify-between gap-2 z-30 shadow-xs">
+        <div class="flex items-center gap-2.5 min-w-0">
+            <div class="bg-indigo-600 text-white p-2 rounded-xl shrink-0">
+                <i data-lucide="layout-grid" class="w-5 h-5"></i>
+            </div>
+            <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                    <h2 class="font-extrabold text-slate-900 text-sm sm:text-base truncate">Lavagna Classe</h2>
+                    <span id="role-badge" class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-indigo-100 text-indigo-700 shrink-0">Docente</span>
+                </div>
+                <div class="flex items-center gap-1.5 text-xs text-slate-500">
+                    <span id="connection-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+                    <span id="connection-status" class="truncate">In attesa...</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="timer-pill" class="hidden items-center gap-2 bg-amber-50 border border-amber-200 text-amber-800 px-3 py-1 rounded-full font-bold text-sm">
+            <i data-lucide="timer" class="w-4 h-4 text-amber-600"></i>
+            <span id="timer-display">05:00</span>
+        </div>
+
+        <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <button type="button" onclick="openRoomModal()" title="Condividi codice stanza con gli studenti"
+                class="flex items-center gap-1.5 bg-slate-100 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 px-2.5 sm:px-3 py-1.5 rounded-xl transition-all cursor-pointer">
+                <span class="text-xs text-slate-500 hidden md:inline">Stanza:</span>
+                <span id="header-room-code" class="font-extrabold text-indigo-700 tracking-wider text-xs sm:text-sm">----</span>
+                <i data-lucide="qr-code" class="w-4 h-4 text-indigo-600"></i>
+            </button>
+
+            <button type="button" id="participants-btn" onclick="toggleTeacherPanel()" title="Studenti connessi"
+                class="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer">
+                <i data-lucide="users" class="w-4 h-4 text-slate-600"></i>
+                <span id="participants-count-badge">0</span>
+            </button>
+
+            <button type="button" id="freeze-btn" onclick="toggleFreezeBoard()" title="Blocca o sblocca la lavagna per gli studenti"
+                class="hidden items-center gap-1.5 bg-slate-100 hover:bg-amber-100 text-slate-700 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer">
+                <i data-lucide="lock" class="w-4 h-4"></i>
+                <span id="freeze-label" class="hidden sm:inline">Blocca</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- BANNER STATO BLOCCATO / SQUADRA STUDENTE -->
+    <div id="frozen-banner" class="hidden bg-amber-500 text-white text-center text-xs font-bold py-1.5 px-4 z-20 shadow-xs">
+        🔒 Il docente ha messo in pausa la lavagna per la spiegazione. Puoi osservare ma non modificare.
+    </div>
+    <div id="student-team-banner" class="hidden bg-indigo-600 text-white text-center text-xs font-bold py-1.5 px-4 z-20 shadow-xs">
+        <!-- Popolato dinamicamente se il docente attiva le squadre -->
+    </div>
+
+    <!-- AREA CENTRALE LAVAGNA (CANVAS INTERATTIVO) -->
+    <main id="board-viewport" class="relative flex-1 overflow-auto board-grid">
+        <div id="board-zoom-sizer" class="relative w-[3000px] h-[2000px]">
+            <div id="board-canvas" class="relative w-[3000px] h-[2000px] origin-top-left transition-transform duration-150">
+
+                <!-- LIVELLO 1: Sfondo Modello Didattico (Colonne, Quadranti, Linea del Tempo...) -->
+                <div id="template-bg-layer" class="absolute inset-0 pointer-events-none"></div>
+
+                <!-- LIVELLO 2: Tratti a Mano Libera, Frecce e Riquadri -->
+                <svg id="vectors-svg-layer" draggable="false" ondragstart="return false;" class="absolute inset-0 w-full h-full z-[5] select-none">
+                    <defs>
+                        <marker id="arrowhead-indigo" markerWidth="10" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#4f46e5" />
+                        </marker>
+                        <marker id="arrowhead-rose" markerWidth="10" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#e11d48" />
+                        </marker>
+                        <marker id="arrowhead-emerald" markerWidth="10" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#059669" />
+                        </marker>
+                        <marker id="arrowhead-slate" markerWidth="10" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#334155" />
+                        </marker>
+                    </defs>
+                    <g id="vectors-layer"></g>
+                    <g id="vector-preview-layer"></g>
+                </svg>
+
+                <!-- LIVELLO 3: Elementi Interattivi (Post-it, Immagini, Timbri) -->
+                <div id="items-layer" class="absolute inset-0 z-10 pointer-events-none"></div>
+
+                <!-- Messaggio guida iniziale quando la lavagna è vuota -->
+                <div id="empty-board-hint" class="fixed inset-0 pointer-events-none flex items-center justify-center p-6">
+                    <div class="bg-white/90 backdrop-blur-xs border border-slate-200 rounded-3xl p-6 max-w-md text-center shadow-sm">
+                        <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                            <i data-lucide="sparkles" class="w-6 h-6"></i>
+                        </div>
+                        <h3 class="font-bold text-slate-800 text-base">Lavagna pronta per la classe!</h3>
+                        <p class="text-xs sm:text-sm text-slate-500 mt-1">
+                            Scrivi un post-it qui sotto, carica un'immagine oppure usa gli strumenti a sinistra per disegnare e collegare le idee.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- CONTROLLO ZOOM LAVAGNA (Fisso in basso a destra, sempre visibile) -->
+    <div class="fixed bottom-20 right-3 z-20 flex items-center gap-1 bg-white/95 backdrop-blur-md border border-slate-200 shadow-lg p-1 rounded-2xl">
+        <button type="button" onclick="adjustZoom(-0.1)" title="Rimpicciolisci lavagna (-)" class="p-2 hover:bg-slate-100 rounded-xl text-slate-700 cursor-pointer">
+            <i data-lucide="zoom-out" class="w-4 h-4"></i>
+        </button>
+        <button type="button" onclick="setZoom(1)" id="zoom-level" title="Ripristina 100%" class="text-xs font-extrabold text-slate-700 hover:bg-slate-100 px-2 py-1.5 rounded-xl min-w-[46px] text-center cursor-pointer">100%</button>
+        <button type="button" onclick="adjustZoom(0.1)" title="Ingrandisci lavagna (+)" class="p-2 hover:bg-slate-100 rounded-xl text-slate-700 cursor-pointer">
+            <i data-lucide="zoom-in" class="w-4 h-4"></i>
+        </button>
+        <div class="h-4 border-l border-slate-200 mx-0.5"></div>
+        <button type="button" onclick="fitBoardToScreen()" title="Adatta l'intera lavagna allo schermo" class="px-2.5 py-1.5 hover:bg-indigo-50 text-indigo-700 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer">
+            <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">Adatta</span>
+        </button>
+    </div>
+
+    <!-- TAVOLOZZA STRUMENTI LATERALE SINISTRA -->
+    <div class="fixed left-3 top-20 z-20 flex flex-col gap-2">
+        <div class="bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl shadow-lg p-1.5 flex flex-col gap-1">
+            <button type="button" onclick="setActiveTool('select')" data-tool="select" title="Sposta e seleziona post-it"
+                class="tool-btn w-10 h-10 rounded-xl flex items-center justify-center bg-indigo-600 text-white shadow-sm transition-all cursor-pointer shrink-0">
+                <i data-lucide="mouse-pointer-2" class="w-5 h-5"></i>
+            </button>
+            <button type="button" onclick="focusNewNoteInput()" title="Scrivi un nuovo post-it"
+                class="w-10 h-10 rounded-xl flex items-center justify-center bg-amber-100 hover:bg-amber-200 text-amber-800 transition-all cursor-pointer shrink-0">
+                <i data-lucide="sticky-note" class="w-5 h-5"></i>
+            </button>
+            <button type="button" onclick="setActiveTool('pen')" data-tool="pen" title="Matita a mano libera"
+                class="tool-btn w-10 h-10 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 transition-all cursor-pointer shrink-0">
+                <i data-lucide="pencil" class="w-5 h-5"></i>
+            </button>
+            <button type="button" onclick="setActiveTool('arrow')" data-tool="arrow" title="Freccia di collegamento"
+                class="tool-btn w-10 h-10 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 transition-all cursor-pointer shrink-0">
+                <i data-lucide="arrow-up-right" class="w-5 h-5"></i>
+            </button>
+            <div class="relative group/shape">
+                <button type="button" onclick="setActiveTool('shape')" data-tool="shape" title="Forme geometriche (Riquadro, Cerchio, Triangolo, Rombo...)"
+                    class="tool-btn w-10 h-10 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 transition-all cursor-pointer shrink-0">
+                    <i data-lucide="shapes" class="w-5 h-5"></i>
+                </button>
+                <!-- Menu forme a comparsa al passaggio del mouse -->
+                <div class="hidden group-hover/shape:flex hover:flex absolute left-full top-0 pl-2 z-30">
+                    <div class="bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl shadow-xl p-1.5 flex items-center gap-1">
+                        <button type="button" onclick="selectShapeType('rect')" data-shapetype="rect" title="Riquadro / Rettangolo"
+                            class="shapetype-btn w-9 h-9 rounded-xl flex items-center justify-center bg-indigo-100 text-indigo-700 ring-2 ring-indigo-500 transition-all cursor-pointer">
+                            <i data-lucide="square" class="w-4 h-4"></i>
+                        </button>
+                        <button type="button" onclick="selectShapeType('circle')" data-shapetype="circle" title="Cerchio / Ellisse"
+                            class="shapetype-btn w-9 h-9 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 transition-all cursor-pointer">
+                            <i data-lucide="circle" class="w-4 h-4"></i>
+                        </button>
+                        <button type="button" onclick="selectShapeType('triangle')" data-shapetype="triangle" title="Triangolo"
+                            class="shapetype-btn w-9 h-9 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 transition-all cursor-pointer">
+                            <i data-lucide="triangle" class="w-4 h-4"></i>
+                        </button>
+                        <button type="button" onclick="selectShapeType('diamond')" data-shapetype="diamond" title="Rombo"
+                            class="shapetype-btn w-9 h-9 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 transition-all cursor-pointer">
+                            <i data-lucide="diamond" class="w-4 h-4"></i>
+                        </button>
+                        <button type="button" onclick="selectShapeType('hexagon')" data-shapetype="hexagon" title="Esagono"
+                            class="shapetype-btn w-9 h-9 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 transition-all cursor-pointer">
+                            <i data-lucide="hexagon" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <button type="button" onclick="setActiveTool('stamp')" data-tool="stamp" title="Timbri rapidi"
+                class="tool-btn w-10 h-10 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 transition-all cursor-pointer shrink-0">
+                <i data-lucide="smile-plus" class="w-5 h-5"></i>
+            </button>
+            <button type="button" onclick="document.getElementById('image-upload-input').click()" title="Carica immagine o foto"
+                class="w-10 h-10 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 transition-all cursor-pointer shrink-0">
+                <i data-lucide="image-plus" class="w-5 h-5"></i>
+            </button>
+            <input type="file" id="image-upload-input" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+            <div class="border-t border-slate-200 my-0.5"></div>
+            <button type="button" onclick="setActiveTool('eraser')" data-tool="eraser" title="Gomma (clicca su un segno per cancellarlo)"
+                class="tool-btn w-10 h-10 rounded-xl flex items-center justify-center text-rose-600 hover:bg-rose-50 transition-all cursor-pointer shrink-0">
+                <i data-lucide="eraser" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- BARRA DISEGNO / TIMBRI (Contestuale quando scegli matita o timbro) -->
+    <div id="context-tool-bar" class="hidden fixed top-20 left-20 z-20 bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl shadow-lg px-3 py-2 flex items-center gap-2 max-w-[calc(100vw-6rem)] overflow-x-auto">
+        <div id="stamp-picker-bar" class="hidden flex items-center gap-1.5">
+            <span class="text-xs font-bold text-slate-500 mr-1">Scegli timbro:</span>
+            <button type="button" onclick="selectStamp('✅')" data-stamp="✅" title="Corretto / Fatto" class="stamp-choice text-lg p-1 rounded-lg bg-indigo-100 ring-2 ring-indigo-500 cursor-pointer shrink-0">✅</button>
+            <button type="button" onclick="selectStamp('❌')" data-stamp="❌" title="Errato / Attenzione" class="stamp-choice text-lg p-1 rounded-lg hover:bg-slate-100 cursor-pointer shrink-0">❌</button>
+            <button type="button" onclick="selectStamp('❓')" data-stamp="❓" title="Domanda / Dubbio" class="stamp-choice text-lg p-1 rounded-lg hover:bg-slate-100 cursor-pointer shrink-0">❓</button>
+            <button type="button" onclick="selectStamp('⭐')" data-stamp="⭐" title="Importante / Ottimo" class="stamp-choice text-lg p-1 rounded-lg hover:bg-slate-100 cursor-pointer shrink-0">⭐</button>
+            <button type="button" onclick="selectStamp('💡')" data-stamp="💡" title="Idea / Osservazione" class="stamp-choice text-lg p-1 rounded-lg hover:bg-slate-100 cursor-pointer shrink-0">💡</button>
+            <button type="button" onclick="selectStamp('📌')" data-stamp="📌" title="Fissa / Promemoria" class="stamp-choice text-lg p-1 rounded-lg hover:bg-slate-100 cursor-pointer shrink-0">📌</button>
+            <button type="button" onclick="selectStamp('🆘')" data-stamp="🆘" title="Aiuto / Emergenza" class="stamp-choice text-lg p-1 rounded-lg hover:bg-slate-100 cursor-pointer shrink-0">🆘</button>
+        </div>
+
+        <div id="stroke-picker-bar" class="hidden flex items-center gap-1.5 flex-wrap">
+            <div id="shape-subpicker" class="hidden flex items-center gap-1 mr-1">
+                <span class="text-xs font-bold text-slate-500">Forma:</span>
+                <button type="button" onclick="selectShapeType('rect')" data-shapetype="rect" title="Riquadro"
+                    class="shapetype-btn p-1.5 rounded-lg bg-indigo-100 text-indigo-700 ring-2 ring-indigo-500 cursor-pointer">
+                    <i data-lucide="square" class="w-3.5 h-3.5"></i>
+                </button>
+                <button type="button" onclick="selectShapeType('circle')" data-shapetype="circle" title="Cerchio / Ellisse"
+                    class="shapetype-btn p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer">
+                    <i data-lucide="circle" class="w-3.5 h-3.5"></i>
+                </button>
+                <button type="button" onclick="selectShapeType('triangle')" data-shapetype="triangle" title="Triangolo"
+                    class="shapetype-btn p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer">
+                    <i data-lucide="triangle" class="w-3.5 h-3.5"></i>
+                </button>
+                <button type="button" onclick="selectShapeType('diamond')" data-shapetype="diamond" title="Rombo"
+                    class="shapetype-btn p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer">
+                    <i data-lucide="diamond" class="w-3.5 h-3.5"></i>
+                </button>
+                <button type="button" onclick="selectShapeType('hexagon')" data-shapetype="hexagon" title="Esagono"
+                    class="shapetype-btn p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer">
+                    <i data-lucide="hexagon" class="w-3.5 h-3.5"></i>
+                </button>
+                <div class="h-5 border-l border-slate-200 mx-1"></div>
+            </div>
+            <span class="text-xs font-bold text-slate-500">Matita:</span>
+            <button type="button" onclick="selectStrokeColor('indigo')" data-scolor="indigo" class="scolor-btn w-6 h-6 rounded-full bg-indigo-600 border-2 border-slate-900 scale-110 cursor-pointer" title="Blu Indaco"></button>
+            <button type="button" onclick="selectStrokeColor('rose')" data-scolor="rose" class="scolor-btn w-6 h-6 rounded-full bg-rose-600 border-2 border-transparent cursor-pointer" title="Rosso"></button>
+            <button type="button" onclick="selectStrokeColor('emerald')" data-scolor="emerald" class="scolor-btn w-6 h-6 rounded-full bg-emerald-600 border-2 border-transparent cursor-pointer" title="Verde"></button>
+            <button type="button" onclick="selectStrokeColor('slate')" data-scolor="slate" class="scolor-btn w-6 h-6 rounded-full bg-slate-700 border-2 border-transparent cursor-pointer" title="Grafite / Nero"></button>
+
+            <div class="h-5 border-l border-slate-200 mx-0.5"></div>
+            <span class="text-xs font-bold text-slate-500">Spessore:</span>
+            <button type="button" onclick="selectStrokeWidth(1.5)" data-swidth="1.5" title="Matita fine (1.5px)"
+                class="swidth-btn w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center cursor-pointer">
+                <span class="w-3.5 h-[1.5px] bg-slate-800 rounded-full block"></span>
+            </button>
+            <button type="button" onclick="selectStrokeWidth(3)" data-swidth="3" title="Tratto medio (3px)"
+                class="swidth-btn w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 ring-2 ring-indigo-500 flex items-center justify-center cursor-pointer">
+                <span class="w-3.5 h-[3px] bg-slate-800 rounded-full block"></span>
+            </button>
+            <button type="button" onclick="selectStrokeWidth(5.5)" data-swidth="5.5" title="Tratto marcato (5.5px)"
+                class="swidth-btn w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center cursor-pointer">
+                <span class="w-3.5 h-[5.5px] bg-slate-800 rounded-full block"></span>
+            </button>
+            <button type="button" onclick="selectStrokeWidth(9)" data-swidth="9" title="Tratto spesso (9px)"
+                class="swidth-btn w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center cursor-pointer">
+                <span class="w-3.5 h-[8px] bg-slate-800 rounded-full block"></span>
+            </button>
+
+            <button type="button" onclick="undoLastVector()" title="Annulla ultimo tratto" class="ml-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-rose-50 text-rose-600 text-xs font-bold cursor-pointer">
+                Annulla
+            </button>
+        </div>
+        <div id="eraser-picker-bar" class="hidden flex items-center gap-2 flex-wrap">
+            <span class="text-xs font-bold text-rose-600">Clicca sulle × rosse o passa sul tratto:</span>
+            <div id="eraser-list-chips" class="flex items-center gap-1 flex-wrap"></div>
+            <button type="button" onclick="clearAllVectors()" class="px-2.5 py-1 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-700 text-xs font-bold cursor-pointer">Cancella tutti i segni</button>
+            <button type="button" onclick="setActiveTool('select')" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer">Fine</button>
+        </div>
+    </div>
+
+    <!-- PANNELLO REGIA DOCENTE (A scomparsa) -->
+    <div id="teacher-panel" class="hidden fixed bottom-24 left-4 z-30 bg-white/95 backdrop-blur-md border border-slate-200 rounded-3xl shadow-2xl p-4 w-84 sm:w-96 max-h-[75vh] overflow-y-auto space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+            <span class="font-extrabold text-sm text-slate-800 flex items-center gap-1.5">
+                <i data-lucide="sliders" class="w-4 h-4 text-indigo-600"></i>
+                Regia Didattica Docente
+            </span>
+            <button type="button" onclick="toggleTeacherPanel()" class="text-slate-400 hover:text-slate-600 p-1 cursor-pointer">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+
+        <div>
+            <div class="flex items-center justify-between mb-1.5">
+                <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Studenti in aula</label>
+                <span class="text-[11px] text-indigo-600 font-semibold">Clicca sui titoli in lavagna per cambiarli</span>
+            </div>
+            <div id="participants-list" class="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-2 bg-slate-50 rounded-xl border border-slate-100">
+                <span class="text-xs text-slate-400 italic">Nessuno studente ancora connesso...</span>
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Struttura Lavagna (Modelli)</label>
+            <div class="grid grid-cols-2 gap-1.5">
+                <button type="button" onclick="changeTemplate('blank')" data-tpl="blank"
+                    class="tpl-btn px-3 py-2 rounded-xl border-2 border-indigo-600 bg-indigo-50 text-indigo-700 text-xs font-bold text-left cursor-pointer">
+                    1. Libera
+                </button>
+                <button type="button" onclick="changeTemplate('kanban')" data-tpl="kanban"
+                    class="tpl-btn px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold text-left cursor-pointer">
+                    2. 3 Colonne / Kanban
+                </button>
+                <button type="button" onclick="changeTemplate('quadrants')" data-tpl="quadrants"
+                    class="tpl-btn px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold text-left cursor-pointer">
+                    3. 4 Quadranti / Gruppi
+                </button>
+                <button type="button" onclick="changeTemplate('timeline')" data-tpl="timeline"
+                    class="tpl-btn px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold text-left cursor-pointer">
+                    4. Linea del Tempo
+                </button>
+                <button type="button" onclick="changeTemplate('mindmap')" data-tpl="mindmap"
+                    class="tpl-btn px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold text-left cursor-pointer">
+                    5. Mappa Mentale
+                </button>
+                <button type="button" onclick="changeTemplate('procon')" data-tpl="procon"
+                    class="tpl-btn px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold text-left cursor-pointer">
+                    6. Pro e Contro
+                </button>
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Lavoro di Gruppo (Assegna Squadre)</label>
+            <div class="grid grid-cols-4 gap-1.5">
+                <button type="button" onclick="setTeamCount(0)" data-teams="0" class="team-btn py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold cursor-pointer">Tutti</button>
+                <button type="button" onclick="setTeamCount(2)" data-teams="2" class="team-btn py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-bold cursor-pointer">2 Squadre</button>
+                <button type="button" onclick="setTeamCount(3)" data-teams="3" class="team-btn py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-bold cursor-pointer">3 Squadre</button>
+                <button type="button" onclick="setTeamCount(4)" data-teams="4" class="team-btn py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-bold cursor-pointer">4 Squadre</button>
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Timer Attività in Classe</label>
+            <div class="flex items-center gap-1.5">
+                <button type="button" onclick="startClassTimer(120)" class="flex-1 py-2 rounded-xl bg-slate-100 hover:bg-amber-100 text-xs font-bold text-slate-700 cursor-pointer">2 min</button>
+                <button type="button" onclick="startClassTimer(300)" class="flex-1 py-2 rounded-xl bg-slate-100 hover:bg-amber-100 text-xs font-bold text-slate-700 cursor-pointer">5 min</button>
+                <button type="button" onclick="startClassTimer(600)" class="flex-1 py-2 rounded-xl bg-slate-100 hover:bg-amber-100 text-xs font-bold text-slate-700 cursor-pointer">10 min</button>
+                <button type="button" onclick="stopClassTimer()" title="Ferma timer" class="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 cursor-pointer">
+                    <i data-lucide="square" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="pt-2 border-t border-slate-100 space-y-2">
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400">Salva e Riapri Lezione</label>
+            <div class="grid grid-cols-2 gap-2">
+                <button type="button" onclick="saveLessonFile()"
+                    class="py-2.5 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer">
+                    <i data-lucide="save" class="w-4 h-4"></i>
+                    <span>Salva File (.json)</span>
+                </button>
+                <button type="button" onclick="document.getElementById('load-lesson-input').click()"
+                    class="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer">
+                    <i data-lucide="folder-open" class="w-4 h-4"></i>
+                    <span>Apri File</span>
+                </button>
+                <input type="file" id="load-lesson-input" accept=".json" class="hidden" onchange="loadLessonFile(event)">
+            </div>
+            <div class="flex gap-2">
+                <button type="button" onclick="exportBoardImage()"
+                    class="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer">
+                    <i data-lucide="download" class="w-4 h-4"></i>
+                    <span>Salva Immagine (PNG)</span>
+                </button>
+                <button type="button" onclick="resetBoardItems()" title="Cancella tutto dalla lavagna"
+                    class="py-2.5 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold flex items-center justify-center gap-1 cursor-pointer">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- BARRA INFERIORE DI CREAZIONE RAPIDA POST-IT -->
+    <footer class="bg-white border-t border-slate-200 px-3 sm:px-6 py-3 z-30 shadow-lg shrink-0">
+        <div class="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-2 sm:gap-3">
+
+            <button type="button" id="btn-open-teacher-panel" onclick="toggleTeacherPanel()"
+                class="hidden items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-2.5 rounded-2xl text-xs font-bold shadow-sm transition-all cursor-pointer shrink-0">
+                <i data-lucide="sliders" class="w-4 h-4 text-indigo-400"></i>
+                <span>Regia Docente</span>
+            </button>
+
+            <div class="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl shrink-0">
+                <button type="button" onclick="selectNoteColor('yellow')" data-color="yellow" title="Giallo"
+                    class="color-dot w-7 h-7 rounded-full bg-amber-200 border-2 border-slate-800 scale-110 transition-transform cursor-pointer"></button>
+                <button type="button" onclick="selectNoteColor('blue')" data-color="blue" title="Azzurro"
+                    class="color-dot w-7 h-7 rounded-full bg-sky-200 border-2 border-transparent hover:scale-105 transition-transform cursor-pointer"></button>
+                <button type="button" onclick="selectNoteColor('pink')" data-color="pink" title="Rosa"
+                    class="color-dot w-7 h-7 rounded-full bg-rose-200 border-2 border-transparent hover:scale-105 transition-transform cursor-pointer"></button>
+                <button type="button" onclick="selectNoteColor('green')" data-color="green" title="Verde"
+                    class="color-dot w-7 h-7 rounded-full bg-emerald-200 border-2 border-transparent hover:scale-105 transition-transform cursor-pointer"></button>
+                <button type="button" onclick="selectNoteColor('purple')" data-color="purple" title="Viola"
+                    class="color-dot w-7 h-7 rounded-full bg-purple-200 border-2 border-transparent hover:scale-105 transition-transform cursor-pointer"></button>
+            </div>
+
+            <form onsubmit="handleCreateNote(event)" class="flex-1 min-w-[200px] flex items-center gap-2">
+                <input type="text" id="new-note-input" placeholder="Scrivi un'idea, una risposta o una domanda..." maxlength="240"
+                    class="w-full px-4 py-2.5 rounded-2xl bg-slate-100 focus:bg-white border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none text-sm font-medium text-slate-800 transition-all">
+                <button type="submit"
+                    class="px-4 sm:px-5 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold text-sm shadow-md shadow-indigo-200 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer">
+                    <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                    <span>Attacca</span>
+                </button>
+            </form>
+        </div>
+    </footer>
+
+    <!-- MODALE CONDIVISIONE CODICE STANZA -->
+    <div id="room-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 border border-slate-200 text-center relative">
+            <button type="button" onclick="closeRoomModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100 cursor-pointer">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+            <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                <i data-lucide="share-2" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-xl font-extrabold text-slate-900">Invita la Classe</h3>
+            <p class="text-sm text-slate-500 mt-1">
+                Gli studenti possono aprire questa pagina sul telefono, scegliere <strong>Studente</strong> e inserire questo codice:
+            </p>
+
+            <div class="my-5 bg-indigo-50 border-2 border-dashed border-indigo-300 rounded-2xl p-4">
+                <span class="text-xs font-bold uppercase tracking-wider text-indigo-400 block mb-1">Codice Stanza</span>
+                <div id="modal-room-code" class="text-4xl font-black tracking-widest text-indigo-700 select-all">CPIA-000</div>
+            </div>
+
+            <div class="space-y-2 text-left mb-5">
+                <label class="text-xs font-bold text-slate-500 uppercase">Oppure condividi il link diretto:</label>
+                <div class="flex gap-2">
+                    <input type="text" id="modal-share-url" readonly class="w-full px-3 py-2 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-600 font-mono">
+                    <button type="button" onclick="copyShareLink()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold shrink-0 cursor-pointer">
+                        Copia
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between text-xs text-slate-500 bg-slate-50 px-4 py-3 rounded-xl">
+                <span>Studenti collegati in tempo reale:</span>
+                <span id="modal-student-count" class="font-extrabold text-indigo-600 text-sm">0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALE MODIFICA TESTO POST-IT -->
+    <div id="edit-note-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 border border-slate-200">
+            <h3 class="text-lg font-extrabold text-slate-900 mb-3">Modifica Post-it</h3>
+            <textarea id="edit-note-textarea" rows="4" maxlength="240"
+                class="w-full p-3.5 rounded-2xl border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none text-slate-800 text-sm font-medium"></textarea>
+            <div class="flex justify-end gap-2 mt-4">
+                <button type="button" onclick="closeEditModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold cursor-pointer">Annulla</button>
+                <button type="button" onclick="saveEditedNote()" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold cursor-pointer">Salva</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALE PERSONALIZZA TITOLO E COLORE COLONNA (Solo Docente) -->
+    <div id="section-title-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200">
+            <div class="bg-slate-900 px-6 py-4 text-white flex items-center justify-between">
+                <h3 class="font-extrabold text-base flex items-center gap-2">
+                    <i data-lucide="palette" class="w-4 h-4 text-indigo-400"></i>
+                    <span>Personalizza Colonna / Area</span>
+                </h3>
+                <button type="button" onclick="closeSectionModal()" class="text-slate-400 hover:text-white cursor-pointer">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Titolo della colonna / area</label>
+                    <input type="text" id="section-title-input" placeholder="Es. Codice Verde - Lieve..."
+                        class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none text-slate-900 font-bold text-sm">
+                </div>
+
+                <div class="mb-5">
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Colore dell'area (12 colori)</label>
+                    <div class="grid grid-cols-4 sm:grid-cols-6 gap-2" id="section-color-picker">
+                        <button type="button" onclick="selectSectionColor('emerald')" data-seccolor="emerald" class="sec-color-btn px-2 py-2 rounded-xl bg-emerald-100 border-2 border-emerald-400 text-emerald-900 text-xs font-bold cursor-pointer">Verde</button>
+                        <button type="button" onclick="selectSectionColor('lime')" data-seccolor="lime" class="sec-color-btn px-2 py-2 rounded-xl bg-lime-100 border-2 border-lime-400 text-lime-900 text-xs font-bold cursor-pointer">Lime</button>
+                        <button type="button" onclick="selectSectionColor('teal')" data-seccolor="teal" class="sec-color-btn px-2 py-2 rounded-xl bg-teal-100 border-2 border-teal-400 text-teal-900 text-xs font-bold cursor-pointer">Turchese</button>
+                        <button type="button" onclick="selectSectionColor('cyan')" data-seccolor="cyan" class="sec-color-btn px-2 py-2 rounded-xl bg-cyan-100 border-2 border-cyan-400 text-cyan-900 text-xs font-bold cursor-pointer">Ciano</button>
+                        <button type="button" onclick="selectSectionColor('sky')" data-seccolor="sky" class="sec-color-btn px-2 py-2 rounded-xl bg-sky-100 border-2 border-sky-400 text-sky-900 text-xs font-bold cursor-pointer">Azzurro</button>
+                        <button type="button" onclick="selectSectionColor('indigo')" data-seccolor="indigo" class="sec-color-btn px-2 py-2 rounded-xl bg-indigo-100 border-2 border-indigo-400 text-indigo-900 text-xs font-bold cursor-pointer">Indaco</button>
+                        <button type="button" onclick="selectSectionColor('purple')" data-seccolor="purple" class="sec-color-btn px-2 py-2 rounded-xl bg-purple-100 border-2 border-purple-400 text-purple-900 text-xs font-bold cursor-pointer">Viola</button>
+                        <button type="button" onclick="selectSectionColor('pink')" data-seccolor="pink" class="sec-color-btn px-2 py-2 rounded-xl bg-pink-100 border-2 border-pink-400 text-pink-900 text-xs font-bold cursor-pointer">Fucsia</button>
+                        <button type="button" onclick="selectSectionColor('rose')" data-seccolor="rose" class="sec-color-btn px-2 py-2 rounded-xl bg-rose-100 border-2 border-rose-400 text-rose-900 text-xs font-bold cursor-pointer">Rosso</button>
+                        <button type="button" onclick="selectSectionColor('orange')" data-seccolor="orange" class="sec-color-btn px-2 py-2 rounded-xl bg-orange-100 border-2 border-orange-400 text-orange-900 text-xs font-bold cursor-pointer">Arancio</button>
+                        <button type="button" onclick="selectSectionColor('amber')" data-seccolor="amber" class="sec-color-btn px-2 py-2 rounded-xl bg-amber-100 border-2 border-amber-400 text-amber-900 text-xs font-bold cursor-pointer">Giallo</button>
+                        <button type="button" onclick="selectSectionColor('slate')" data-seccolor="slate" class="sec-color-btn px-2 py-2 rounded-xl bg-slate-100 border-2 border-slate-400 text-slate-900 text-xs font-bold cursor-pointer">Neutro</button>
+                    </div>
+                </div>
+
+                <div class="flex gap-2 justify-end">
+                    <button type="button" onclick="closeSectionModal()" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm cursor-pointer">Annulla</button>
+                    <button type="button" onclick="saveSectionTitle()" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-md cursor-pointer">Salva</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MESSAGGIO NOTIFICA (TOAST) -->
+    <div id="toast-box" class="fixed top-16 right-4 z-50 pointer-events-none flex flex-col gap-2"></div>
+
+    <script>
+        // ---------------- STATO GLOBALE DELL'APPLICAZIONE ----------------
+        const state = {
+            role: 'teacher',
+            userName: '',
+            userId: 'user-' + Math.random().toString(36).substring(2, 9),
+            roomCode: '',
+            selectedColor: 'yellow',
+            activeTool: 'select',
+            selectedShapeType: 'rect',
+            selectedStamp: '✅',
+            strokeColor: 'indigo',
+            strokeWidth: 3,
+            template: 'blank',
+            sectionTitles: {
+                col1: '1. Da Fare / Idee Iniziali',
+                col2: '2. In Discussione',
+                col3: '3. Confermato / Sintesi',
+                q1: 'Gruppo 1 • Giallo',
+                q2: 'Gruppo 2 • Azzurro',
+                q3: 'Gruppo 3 • Rosa',
+                q4: 'Gruppo 4 • Verde',
+                t1: 'Fase 1 • Prima',
+                t2: 'Fase 2 • Sviluppo',
+                t3: 'Fase 3 • Svolta',
+                t4: 'Fase 4 • Oggi / Esito',
+                center: 'TEMA CENTRALE',
+                pro: '👍 Aspetti Positivi / PRO',
+                con: '👎 Dubbi / CONTRO'
+            },
+            sectionColors: {
+                col1: 'emerald', col2: 'amber', col3: 'rose',
+                q1: 'amber', q2: 'sky', q3: 'rose', q4: 'emerald',
+                t1: 'indigo', t2: 'indigo', t3: 'indigo', t4: 'indigo',
+                center: 'indigo',
+                pro: 'emerald', con: 'rose'
+            },
+            teamCount: 0,
+            myGroup: null,
+            isFrozen: false,
+            zoom: 1,
+            items: [],
+            vectors: [],
+            maxZIndex: 10,
+            timerSeconds: 0,
+            timerRunning: false
+        };
+
+        const DEFAULT_SECTION_COLORS = {
+            col1: 'emerald', col2: 'amber', col3: 'rose',
+            q1: 'amber', q2: 'sky', q3: 'rose', q4: 'emerald',
+            t1: 'indigo', t2: 'indigo', t3: 'indigo', t4: 'indigo',
+            center: 'indigo',
+            pro: 'emerald', con: 'rose'
+        };
+
+        const SECTION_COLOR_THEMES = {
+            emerald: { bg: 'bg-emerald-50/80', border: 'border-emerald-300', header: 'bg-emerald-100 text-emerald-900' },
+            lime:    { bg: 'bg-lime-50/80',    border: 'border-lime-300',    header: 'bg-lime-100 text-lime-900' },
+            teal:    { bg: 'bg-teal-50/80',    border: 'border-teal-300',    header: 'bg-teal-100 text-teal-900' },
+            cyan:    { bg: 'bg-cyan-50/80',    border: 'border-cyan-300',    header: 'bg-cyan-100 text-cyan-900' },
+            sky:     { bg: 'bg-sky-50/80',     border: 'border-sky-300',     header: 'bg-sky-100 text-sky-900' },
+            indigo:  { bg: 'bg-indigo-50/80',  border: 'border-indigo-300',  header: 'bg-indigo-100 text-indigo-900' },
+            purple:  { bg: 'bg-purple-50/80',  border: 'border-purple-300',  header: 'bg-purple-100 text-purple-900' },
+            pink:    { bg: 'bg-pink-50/80',    border: 'border-pink-300',    header: 'bg-pink-100 text-pink-900' },
+            rose:    { bg: 'bg-rose-50/80',    border: 'border-rose-300',    header: 'bg-rose-100 text-rose-900' },
+            orange:  { bg: 'bg-orange-50/80',  border: 'border-orange-300',  header: 'bg-orange-100 text-orange-900' },
+            amber:   { bg: 'bg-amber-50/80',   border: 'border-amber-300',   header: 'bg-amber-100 text-amber-900' },
+            slate:   { bg: 'bg-slate-100/80',  border: 'border-slate-300',   header: 'bg-slate-200 text-slate-900' }
+        };
+
+        let peer = null;
+        let hostConnection = null;
+        const studentConnections = {};
+        const connectedStudents = {};
+        let editingNoteId = null;
+        let editingSectionKey = null;
+        let selectedSectionColor = 'slate';
+        let timerInterval = null;
+        let isDrawingVector = false;
+        let currentVector = null;
+        let isErasing = false;
+
+        const NOTE_STYLES = {
+            yellow: { bg: 'bg-amber-200', border: 'border-amber-300', text: 'text-amber-950', badge: 'bg-amber-500' },
+            blue:   { bg: 'bg-sky-200',   border: 'border-sky-300',   text: 'text-sky-950',   badge: 'bg-sky-500' },
+            pink:   { bg: 'bg-rose-200',  border: 'border-rose-300',  text: 'text-rose-950',  badge: 'bg-rose-500' },
+            green:  { bg: 'bg-emerald-200', border: 'border-emerald-300', text: 'text-emerald-950', badge: 'bg-emerald-500' },
+            purple: { bg: 'bg-purple-200', border: 'border-purple-300', text: 'text-purple-950', badge: 'bg-purple-500' }
+        };
+
+        const STROKE_HEX = {
+            indigo: '#4f46e5',
+            rose: '#e11d48',
+            emerald: '#059669',
+            slate: '#334155'
+        };
+
+        // Controllo parametri URL (?room=CPIA-123)
+        window.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            const roomParam = params.get('room');
+            if (roomParam) {
+                selectRole('student');
+                document.getElementById('input-room-code').value = roomParam.toUpperCase();
+            }
+            lucide.createIcons();
+        });
+
+        // ---------------- ACCESSO E RUOLI ----------------
+        function selectRole(role) {
+            state.role = role;
+            const btnTeacher = document.getElementById('btn-role-teacher');
+            const btnStudent = document.getElementById('btn-role-student');
+            const roomField = document.getElementById('student-room-field');
+
+            if (role === 'teacher') {
+                btnTeacher.className = 'flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-indigo-600 bg-indigo-50 text-indigo-700 font-bold transition-all cursor-pointer';
+                btnStudent.className = 'flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-slate-200 hover:border-indigo-300 text-slate-600 font-bold transition-all cursor-pointer';
+                roomField.classList.add('hidden');
+            } else {
+                btnStudent.className = 'flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-indigo-600 bg-indigo-50 text-indigo-700 font-bold transition-all cursor-pointer';
+                btnTeacher.className = 'flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-slate-200 hover:border-indigo-300 text-slate-600 font-bold transition-all cursor-pointer';
+                roomField.classList.remove('hidden');
+            }
+        }
+
+        function generateRoomCode() {
+            const num = Math.floor(100 + Math.random() * 900);
+            return `CPIA-${num}`;
+        }
+
+        function enterBoard() {
+            const nameInput = document.getElementById('input-user-name').value.trim();
+            if (!nameInput) {
+                showToast('Inserisci il tuo nome prima di entrare!', 'error');
+                return;
+            }
+            state.userName = nameInput;
+
+            if (state.role === 'teacher') {
+                state.roomCode = generateRoomCode();
+                setupTeacherUI();
+                initPeerHost();
+            } else {
+                const codeInput = document.getElementById('input-room-code').value.trim().toUpperCase();
+                if (!codeInput) {
+                    showToast('Inserisci il codice della stanza mostrato sulla LIM!', 'error');
+                    return;
+                }
+                state.roomCode = codeInput;
+                setupStudentUI();
+                initPeerStudent();
+            }
+
+            document.getElementById('header-room-code').textContent = state.roomCode;
+            document.getElementById('setup-modal').classList.add('hidden');
+            lucide.createIcons();
+        }
+
+        function setupTeacherUI() {
+            document.getElementById('role-badge').textContent = 'Docente (LIM)';
+            document.getElementById('btn-open-teacher-panel').classList.remove('hidden');
+            document.getElementById('btn-open-teacher-panel').classList.add('flex');
+            document.getElementById('freeze-btn').classList.remove('hidden');
+            document.getElementById('freeze-btn').classList.add('flex');
+        }
+
+        function setupStudentUI() {
+            document.getElementById('role-badge').textContent = state.userName;
+            document.getElementById('role-badge').className = 'px-2 py-0.5 text-[11px] font-bold rounded-full bg-emerald-100 text-emerald-700 shrink-0';
+        }
+
+        // ---------------- CONNESSIONE REAL-TIME (PEERJS) ----------------
+        function getPeerIdFromRoom(code) {
+            return 'cpia-lavagna-' + code.replace(/[^A-Z0-9]/gi, '').toLowerCase();
+        }
+
+        function setConnectionStatus(status, text) {
+            const dot = document.getElementById('connection-dot');
+            const label = document.getElementById('connection-status');
+            label.textContent = text;
+            if (status === 'online') {
+                dot.className = 'w-2 h-2 rounded-full bg-emerald-500';
+            } else if (status === 'connecting') {
+                dot.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
+            } else {
+                dot.className = 'w-2 h-2 rounded-full bg-rose-500';
+            }
+        }
+
+        function initPeerHost() {
+            setConnectionStatus('connecting', 'Creazione stanza...');
+            const hostId = getPeerIdFromRoom(state.roomCode);
+
+            try {
+                peer = new Peer(hostId);
+                peer.on('open', () => {
+                    setConnectionStatus('online', 'Stanza attiva • Pronta per la classe');
+                    openRoomModal();
+                });
+
+                peer.on('connection', (conn) => {
+                    conn.on('open', () => {
+                        studentConnections[conn.peer] = conn;
+                        conn.send({ type: 'SYNC_STATE', payload: getSyncPayload() });
+                    });
+
+                    conn.on('data', (data) => {
+                        handleMessageFromStudent(conn, data);
+                    });
+
+                    conn.on('close', () => {
+                        delete studentConnections[conn.peer];
+                        const uid = Object.keys(connectedStudents).find(k => connectedStudents[k].peerId === conn.peer);
+                        if (uid) delete connectedStudents[uid];
+                        updateParticipantsUI();
+                    });
+                });
+
+                peer.on('error', () => {
+                    setConnectionStatus('online', 'Modalità lavagna locale attiva');
+                });
+            } catch (e) {
+                setConnectionStatus('online', 'Modalità lavagna locale attiva');
+            }
+        }
+
+        function initPeerStudent() {
+            setConnectionStatus('connecting', 'Connessione alla LIM...');
+            const hostId = getPeerIdFromRoom(state.roomCode);
+
+            try {
+                peer = new Peer();
+                peer.on('open', () => {
+                    hostConnection = peer.connect(hostId, { reliable: true });
+
+                    hostConnection.on('open', () => {
+                        setConnectionStatus('online', 'Connesso alla lavagna di classe');
+                        hostConnection.send({
+                            type: 'JOIN',
+                            payload: { userId: state.userId, name: state.userName }
+                        });
+                    });
+
+                    hostConnection.on('data', (data) => {
+                        handleMessageFromHost(data);
+                    });
+
+                    hostConnection.on('close', () => {
+                        setConnectionStatus('offline', 'Disconnesso dalla LIM');
+                        showToast('Connessione con il docente interrotta.', 'error');
+                    });
+                });
+
+                peer.on('error', () => {
+                    setConnectionStatus('offline', 'Stanza non trovata');
+                    showToast('Codice stanza non trovato. Controlla il codice sulla LIM.', 'error');
+                });
+            } catch (e) {
+                setConnectionStatus('offline', 'Errore di rete');
+            }
+        }
+
+        function getSyncPayload() {
+            return {
+                items: state.items,
+                vectors: state.vectors,
+                template: state.template,
+                sectionTitles: state.sectionTitles,
+                sectionColors: state.sectionColors,
+                isFrozen: state.isFrozen,
+                teamCount: state.teamCount,
+                students: connectedStudents,
+                timerSeconds: state.timerSeconds,
+                timerRunning: state.timerRunning
+            };
+        }
+
+        function broadcastState() {
+            if (state.role !== 'teacher') return;
+            const msg = { type: 'SYNC_STATE', payload: getSyncPayload() };
+            Object.values(studentConnections).forEach(conn => {
+                if (conn && conn.open) conn.send(msg);
+            });
+        }
+
+        function sendToHost(msg) {
+            if (state.role === 'student' && hostConnection && hostConnection.open) {
+                hostConnection.send(msg);
+            }
+        }
+
+        function handleMessageFromStudent(conn, msg) {
+            if (!msg || !msg.type) return;
+
+            if (msg.type === 'JOIN') {
+                const { userId, name } = msg.payload;
+                const assignedGroup = assignStudentGroup(userId);
+                connectedStudents[userId] = { userId, name, peerId: conn.peer, group: assignedGroup };
+                updateParticipantsUI();
+                showToast(`${name} è entrato nella lavagna!`, 'info');
+                broadcastState();
+            } else if (msg.type === 'ADD_ITEM') {
+                if (state.isFrozen) return;
+                state.items.push(msg.payload);
+                renderSingleItem(msg.payload);
+                updateBoardEmptyState();
+                broadcastState();
+            } else if (msg.type === 'MOVE_ITEM') {
+                if (state.isFrozen) return;
+                const item = state.items.find(n => n.id === msg.payload.id);
+                if (item) {
+                    item.x = msg.payload.x;
+                    item.y = msg.payload.y;
+                    item.zIndex = ++state.maxZIndex;
+                    renderSingleItem(item);
+                    broadcastState();
+                }
+            } else if (msg.type === 'RESIZE_ITEM') {
+                if (state.isFrozen) return;
+                const item = state.items.find(n => n.id === msg.payload.id);
+                if (item) {
+                    item.width = msg.payload.width;
+                    if (msg.payload.height) item.height = msg.payload.height;
+                    renderSingleItem(item);
+                    broadcastState();
+                }
+            } else if (msg.type === 'ROTATE_ITEM') {
+                if (state.isFrozen) return;
+                const item = state.items.find(n => n.id === msg.payload.id);
+                if (item) {
+                    item.rotation = msg.payload.rotation || 0;
+                    renderSingleItem(item);
+                    broadcastState();
+                }
+            } else if (msg.type === 'EDIT_ITEM') {
+                if (state.isFrozen) return;
+                const item = state.items.find(n => n.id === msg.payload.id);
+                if (item) {
+                    item.text = msg.payload.text;
+                    if (msg.payload.color) item.color = msg.payload.color;
+                    renderSingleItem(item);
+                    broadcastState();
+                }
+            } else if (msg.type === 'DELETE_ITEM') {
+                if (state.isFrozen) return;
+                state.items = state.items.filter(n => n.id !== msg.payload);
+                const el = document.getElementById(msg.payload);
+                if (el) el.remove();
+                updateBoardEmptyState();
+                broadcastState();
+            } else if (msg.type === 'VOTE_ITEM') {
+                const item = state.items.find(n => n.id === msg.payload.id);
+                if (item) {
+                    const voter = msg.payload.userId;
+                    if (!item.votedBy) item.votedBy = [];
+                    const idx = item.votedBy.indexOf(voter);
+                    if (idx === -1) item.votedBy.push(voter);
+                    else item.votedBy.splice(idx, 1);
+                    item.votes = item.votedBy.length;
+                    renderSingleItem(item);
+                    broadcastState();
+                }
+            } else if (msg.type === 'ADD_VECTOR') {
+                if (state.isFrozen) return;
+                state.vectors.push(msg.payload);
+                renderAllVectors();
+                broadcastState();
+            } else if (msg.type === 'DELETE_VECTOR') {
+                if (state.isFrozen) return;
+                state.vectors = state.vectors.filter(v => v.id !== msg.payload);
+                renderAllVectors();
+                broadcastState();
+            } else if (msg.type === 'MOVE_VECTOR') {
+                if (state.isFrozen) return;
+                const vec = state.vectors.find(v => v.id === msg.payload.id);
+                if (vec) {
+                    if (vec.type === 'pen' && Array.isArray(msg.payload.points)) {
+                        vec.points = msg.payload.points;
+                    } else {
+                        vec.x1 = msg.payload.x1;
+                        vec.y1 = msg.payload.y1;
+                        vec.x2 = msg.payload.x2;
+                        vec.y2 = msg.payload.y2;
+                    }
+                    if (typeof msg.payload.rotation === 'number') {
+                        vec.rotation = msg.payload.rotation;
+                    }
+                    renderAllVectors();
+                    broadcastState();
+                }
+            }
+        }
+
+        function handleMessageFromHost(msg) {
+            if (!msg || msg.type !== 'SYNC_STATE') return;
+            const data = msg.payload;
+            state.items = data.items || [];
+            state.vectors = data.vectors || [];
+            state.template = data.template || 'blank';
+            if (data.sectionTitles) state.sectionTitles = data.sectionTitles;
+            if (data.sectionColors) state.sectionColors = data.sectionColors;
+            state.isFrozen = !!data.isFrozen;
+            state.teamCount = data.teamCount || 0;
+            state.timerSeconds = data.timerSeconds || 0;
+            state.timerRunning = !!data.timerRunning;
+
+            if (data.students) {
+                document.getElementById('participants-count-badge').textContent = Object.keys(data.students).length;
+                if (data.students[state.userId]) {
+                    state.myGroup = data.students[state.userId].group;
+                    updateStudentGroupBanner();
+                }
+            }
+
+            applyTemplateUI();
+            updateFreezeUI();
+            updateTimerDisplay();
+            renderAllItems();
+            renderAllVectors();
+        }
+
+        function updateStudentGroupBanner() {
+            const banner = document.getElementById('student-team-banner');
+            if (!state.myGroup || state.teamCount === 0) {
+                banner.classList.add('hidden');
+                return;
+            }
+            const teamNames = {
+                1: { label: 'Gruppo 1 • Giallo', color: 'yellow', bg: 'bg-amber-500' },
+                2: { label: 'Gruppo 2 • Azzurro', color: 'blue', bg: 'bg-sky-600' },
+                3: { label: 'Gruppo 3 • Rosa', color: 'pink', bg: 'bg-rose-600' },
+                4: { label: 'Gruppo 4 • Verde', color: 'green', bg: 'bg-emerald-600' }
+            };
+            const t = teamNames[state.myGroup];
+            if (t) {
+                banner.className = `${t.bg} text-white text-center text-xs font-bold py-1.5 px-4 z-20 shadow-xs`;
+                banner.textContent = `👥 Fai parte del ${t.label}`;
+                banner.classList.remove('hidden');
+                selectNoteColor(t.color);
+            }
+        }
+
+        // ---------------- STRUMENTI DI DISEGNO & TIMBRI ----------------
+        function setActiveTool(tool) {
+            state.activeTool = tool;
+            document.querySelectorAll('.tool-btn').forEach(btn => {
+                if (btn.dataset.tool === tool) {
+                    btn.className = 'tool-btn w-10 h-10 rounded-xl flex items-center justify-center bg-indigo-600 text-white shadow-sm transition-all cursor-pointer shrink-0';
+                } else if (btn.dataset.tool === 'eraser') {
+                    btn.className = 'tool-btn w-10 h-10 rounded-xl flex items-center justify-center text-rose-600 hover:bg-rose-50 transition-all cursor-pointer shrink-0';
+                } else {
+                    btn.className = 'tool-btn w-10 h-10 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 transition-all cursor-pointer shrink-0';
+                }
+            });
+
+            const contextBar = document.getElementById('context-tool-bar');
+            const stampBar = document.getElementById('stamp-picker-bar');
+            const strokeBar = document.getElementById('stroke-picker-bar');
+            const shapeSubpicker = document.getElementById('shape-subpicker');
+            const eraserBar = document.getElementById('eraser-picker-bar');
+
+            contextBar.classList.add('hidden');
+            stampBar.classList.add('hidden');
+            strokeBar.classList.add('hidden');
+            if (shapeSubpicker) shapeSubpicker.classList.add('hidden');
+            eraserBar.classList.add('hidden');
+
+            const canvas = document.getElementById('board-canvas');
+            const svgLayer = document.getElementById('vectors-svg-layer');
+            canvas.style.cursor = 'default';
+            if (svgLayer) {
+                svgLayer.style.pointerEvents = 'none';
+                svgLayer.style.zIndex = '5';
+            }
+            renderAllVectors();
+
+            if (tool === 'stamp') {
+                contextBar.classList.remove('hidden');
+                stampBar.classList.remove('hidden');
+                canvas.style.cursor = 'copy';
+            } else if (tool === 'pen' || tool === 'arrow' || tool === 'shape') {
+                contextBar.classList.remove('hidden');
+                strokeBar.classList.remove('hidden');
+                if (tool === 'shape' && shapeSubpicker) {
+                    shapeSubpicker.classList.remove('hidden');
+                }
+                canvas.style.cursor = 'crosshair';
+            } else if (tool === 'eraser') {
+                contextBar.classList.remove('hidden');
+                eraserBar.classList.remove('hidden');
+                canvas.style.cursor = 'crosshair';
+            }
+        }
+
+        function selectShapeType(shapeType) {
+            state.selectedShapeType = shapeType;
+            document.querySelectorAll('.shapetype-btn').forEach(btn => {
+                if (btn.dataset.shapetype === shapeType) {
+                    btn.classList.remove('text-slate-700', 'bg-slate-100', 'hover:bg-slate-100', 'hover:bg-slate-200');
+                    btn.classList.add('bg-indigo-100', 'text-indigo-700', 'ring-2', 'ring-indigo-500');
+                } else {
+                    btn.classList.remove('bg-indigo-100', 'text-indigo-700', 'ring-2', 'ring-indigo-500');
+                    btn.classList.add('text-slate-700', 'hover:bg-slate-100');
+                }
+            });
+            if (state.activeTool !== 'shape') {
+                setActiveTool('shape');
+            }
+        }
+
+        function selectStamp(emoji) {
+            state.selectedStamp = emoji;
+            document.querySelectorAll('.stamp-choice').forEach(btn => {
+                if (btn.dataset.stamp === emoji) {
+                    btn.className = 'stamp-choice text-lg p-1 rounded-lg bg-indigo-100 ring-2 ring-indigo-500 cursor-pointer shrink-0';
+                } else {
+                    btn.className = 'stamp-choice text-lg p-1 rounded-lg hover:bg-slate-100 cursor-pointer shrink-0';
+                }
+            });
+        }
+
+        function selectStrokeColor(color) {
+            state.strokeColor = color;
+            document.querySelectorAll('.scolor-btn').forEach(btn => {
+                if (btn.dataset.scolor === color) {
+                    btn.classList.remove('border-transparent');
+                    btn.classList.add('border-slate-900', 'scale-110');
+                } else {
+                    btn.classList.add('border-transparent');
+                    btn.classList.remove('border-slate-900', 'scale-110');
+                }
+            });
+        }
+
+        function selectStrokeWidth(width) {
+            state.strokeWidth = width;
+            document.querySelectorAll('.swidth-btn').forEach(btn => {
+                if (parseFloat(btn.dataset.swidth) === width) {
+                    btn.className = 'swidth-btn w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 ring-2 ring-indigo-500 flex items-center justify-center cursor-pointer';
+                } else {
+                    btn.className = 'swidth-btn w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center cursor-pointer';
+                }
+            });
+        }
+
+        function getCanvasCoords(e) {
+            const canvas = document.getElementById('board-canvas');
+            const rect = canvas.getBoundingClientRect();
+            const touch = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]);
+            const clientX = touch ? touch.clientX : e.clientX;
+            const clientY = touch ? touch.clientY : e.clientY;
+            return {
+                x: Math.round((clientX - rect.left) / state.zoom),
+                y: Math.round((clientY - rect.top) / state.zoom)
+            };
+        }
+
+        function distToSegment(px, py, x1, y1, x2, y2) {
+            const l2 = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
+            if (l2 === 0) return Math.hypot(px - x1, py - y1);
+            let t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
+            t = Math.max(0, Math.min(1, t));
+            return Math.hypot(px - (x1 + t * (x2 - x1)), py - (y1 + t * (y2 - y1)));
+        }
+
+        function eraseVectorsNearPoint(pt) {
+            const threshold = 24 / state.zoom;
+            const toDelete = [];
+
+            for (const vec of state.vectors) {
+                let hit = false;
+                if (vec.type === 'pen' && Array.isArray(vec.points)) {
+                    for (let i = 0; i < vec.points.length - 1; i++) {
+                        if (distToSegment(pt.x, pt.y, vec.points[i].x, vec.points[i].y, vec.points[i + 1].x, vec.points[i + 1].y) <= threshold) {
+                            hit = true;
+                            break;
+                        }
+                    }
+                } else if (vec.type === 'arrow') {
+                    if (distToSegment(pt.x, pt.y, vec.x1, vec.y1, vec.x2, vec.y2) <= threshold) {
+                        hit = true;
+                    }
+                } else if (vec.type === 'shape') {
+                    const minX = Math.min(vec.x1, vec.x2);
+                    const maxX = Math.max(vec.x1, vec.x2);
+                    const minY = Math.min(vec.y1, vec.y2);
+                    const maxY = Math.max(vec.y1, vec.y2);
+                    const nearTop = distToSegment(pt.x, pt.y, minX, minY, maxX, minY) <= threshold;
+                    const nearBottom = distToSegment(pt.x, pt.y, minX, maxY, maxX, maxY) <= threshold;
+                    const nearLeft = distToSegment(pt.x, pt.y, minX, minY, minX, maxY) <= threshold;
+                    const nearRight = distToSegment(pt.x, pt.y, maxX, minY, maxX, maxY) <= threshold;
+                    const inside = pt.x >= minX && pt.x <= maxX && pt.y >= minY && pt.y <= maxY;
+                    if (nearTop || nearBottom || nearLeft || nearRight || inside) {
+                        hit = true;
+                    }
+                }
+                if (hit) toDelete.push(vec.id);
+            }
+
+            toDelete.forEach(id => eraseVectorById(id));
+        }
+
+        function initCanvasInteractions() {
+            const canvas = document.getElementById('board-canvas');
+
+            const onPointerDown = (e) => {
+                if (state.activeTool === 'eraser') {
+                    if (e.target.closest('button')) return;
+                    if (e.cancelable) e.preventDefault();
+                    e.stopPropagation();
+                    if (window.getSelection) {
+                        try { window.getSelection().removeAllRanges(); } catch (_) {}
+                    }
+                    isErasing = true;
+                    const vecTarget = e.target.closest('[data-vec-id]');
+                    if (vecTarget) {
+                        eraseVectorById(vecTarget.dataset.vecId);
+                    }
+                    eraseVectorsNearPoint(getCanvasCoords(e));
+                    return;
+                }
+
+                if (e.target.closest('.sticky-note') || e.target.closest('.board-item') || e.target.closest('button') || e.target.closest('.section-title-box')) return;
+                if (state.isFrozen && state.role !== 'teacher') {
+                    showToast('La lavagna è bloccata dal docente.', 'error');
+                    return;
+                }
+
+                const pt = getCanvasCoords(e);
+
+                if (state.activeTool === 'stamp') {
+                    createBoardItem({
+                        type: 'stamp',
+                        text: state.selectedStamp,
+                        x: Math.max(10, pt.x - 24),
+                        y: Math.max(10, pt.y - 24)
+                    });
+                    return;
+                }
+
+                if (state.activeTool === 'pen' || state.activeTool === 'arrow' || state.activeTool === 'shape') {
+                    if (e.cancelable) e.preventDefault();
+                    isDrawingVector = true;
+                    currentVector = {
+                        id: 'vec-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+                        type: state.activeTool,
+                        shapeType: state.activeTool === 'shape' ? (state.selectedShapeType || 'rect') : null,
+                        color: state.strokeColor,
+                        strokeWidth: state.strokeWidth || 3,
+                        authorId: state.userId,
+                        points: [pt],
+                        x1: pt.x, y1: pt.y,
+                        x2: pt.x, y2: pt.y
+                    };
+                    renderVectorPreview();
+                }
+            };
+
+            const onPointerMove = (e) => {
+                if (isErasing && state.activeTool === 'eraser') {
+                    if (e.cancelable) e.preventDefault();
+                    const vecTarget = e.target && e.target.closest && e.target.closest('[data-vec-id]');
+                    if (vecTarget) {
+                        eraseVectorById(vecTarget.dataset.vecId);
+                    }
+                    eraseVectorsNearPoint(getCanvasCoords(e));
+                    return;
+                }
+
+                if (!isDrawingVector || !currentVector) return;
+                if (e.cancelable) e.preventDefault();
+                const pt = getCanvasCoords(e);
+                if (currentVector.type === 'pen') {
+                    const last = currentVector.points[currentVector.points.length - 1];
+                    if (Math.hypot(pt.x - last.x, pt.y - last.y) > 4) {
+                        currentVector.points.push(pt);
+                    }
+                } else if (e.shiftKey) {
+                    const dx = pt.x - currentVector.x1;
+                    const dy = pt.y - currentVector.y1;
+                    if (currentVector.type === 'arrow') {
+                        // Aggancia la freccia agli angoli multipli di 45°
+                        const angle = Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) * (Math.PI / 4);
+                        const len = Math.hypot(dx, dy);
+                        currentVector.x2 = Math.round(currentVector.x1 + Math.cos(angle) * len);
+                        currentVector.y2 = Math.round(currentVector.y1 + Math.sin(angle) * len);
+                    } else {
+                        // Mantiene proporzioni 1:1 (quadrato perfetto, cerchio perfetto, ecc.)
+                        const side = Math.max(Math.abs(dx), Math.abs(dy));
+                        currentVector.x2 = currentVector.x1 + (dx >= 0 ? side : -side);
+                        currentVector.y2 = currentVector.y1 + (dy >= 0 ? side : -side);
+                    }
+                } else {
+                    currentVector.x2 = pt.x;
+                    currentVector.y2 = pt.y;
+                }
+                renderVectorPreview();
+            };
+
+            const onPointerUp = () => {
+                if (isErasing) {
+                    isErasing = false;
+                }
+                if (!isDrawingVector || !currentVector) return;
+                isDrawingVector = false;
+
+                let isValid = false;
+                if (currentVector.type === 'pen' && currentVector.points.length > 1) isValid = true;
+                if ((currentVector.type === 'arrow' || currentVector.type === 'shape') && Math.hypot(currentVector.x2 - currentVector.x1, currentVector.y2 - currentVector.y1) > 15) isValid = true;
+
+                if (isValid) {
+                    const createdType = currentVector.type;
+                    state.vectors.push(currentVector);
+                    renderAllVectors();
+                    sendToHost({ type: 'ADD_VECTOR', payload: currentVector });
+
+                    // Dopo aver tracciato una forma o una freccia, torna subito al puntatore
+                    // così puoi spostarla, ruotarla o cancellarla immediatamente senza rischiare di ridisegnarla per errore
+                    if (createdType === 'shape' || createdType === 'arrow') {
+                        setActiveTool('select');
+                    }
+                }
+
+                currentVector = null;
+                document.getElementById('vector-preview-layer').innerHTML = '';
+            };
+
+            canvas.addEventListener('mousedown', onPointerDown);
+            window.addEventListener('mousemove', onPointerMove);
+            window.addEventListener('mouseup', onPointerUp);
+
+            canvas.addEventListener('touchstart', onPointerDown, { passive: false });
+            window.addEventListener('touchmove', onPointerMove, { passive: false });
+            window.addEventListener('touchend', onPointerUp);
+        }
+
+        function buildVectorSvgHtml(vec, isPreview = false) {
+            const hex = STROKE_HEX[vec.color] || STROKE_HEX.indigo;
+            const sw = vec.strokeWidth || 3;
+            const hitSw = Math.max(28, sw + 24);
+            const opacityAttr = isPreview ? 'opacity="0.65"' : '';
+            const deleteAttr = isPreview ? '' : `data-vec-id="${vec.id}" onpointerdown="eraseVectorById('${vec.id}', event)" onclick="eraseVectorById('${vec.id}', event)"`;
+            const showEraseBadge = !isPreview && state.activeTool === 'eraser';
+            const rot = Number(vec.rotation) || 0;
+
+            const getRotTransform = (cx, cy) => rot !== 0 ? `transform="rotate(${rot} ${cx} ${cy})"` : '';
+
+            const renderEraseBadge = (bx, by) => {
+                if (!showEraseBadge) return '';
+                return `
+                    <g data-vec-id="${vec.id}" onpointerdown="eraseVectorById('${vec.id}', event)" onclick="eraseVectorById('${vec.id}', event)" style="cursor:pointer;">
+                        <circle cx="${bx}" cy="${by}" r="14" fill="#e11d48" stroke="#ffffff" stroke-width="2.5" />
+                        <text x="${bx}" y="${by + 5}" text-anchor="middle" fill="#ffffff" font-size="16" font-weight="bold" font-family="sans-serif">×</text>
+                    </g>
+                `;
+            };
+
+            if (vec.type === 'pen') {
+                const pts = vec.points.map(p => `${p.x},${p.y}`).join(' ');
+                const xs = vec.points.map(p => p.x);
+                const ys = vec.points.map(p => p.y);
+                const cx = Math.round((Math.min(...xs) + Math.max(...xs)) / 2);
+                const cy = Math.round((Math.min(...ys) + Math.max(...ys)) / 2);
+                const mid = vec.points[Math.floor(vec.points.length / 2)] || vec.points[0] || { x: 0, y: 0 };
+                return `
+                    <g class="vector-item" ${deleteAttr} ${opacityAttr} ${getRotTransform(cx, cy)}>
+                        <polyline points="${pts}" fill="none" stroke="transparent" stroke-width="${hitSw}" stroke-linecap="round" stroke-linejoin="round" />
+                        <polyline points="${pts}" fill="none" stroke="${hex}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" />
+                        ${renderEraseBadge(mid.x, mid.y)}
+                    </g>
+                `;
+            }
+            if (vec.type === 'arrow') {
+                const midX = Math.round((vec.x1 + vec.x2) / 2);
+                const midY = Math.round((vec.y1 + vec.y2) / 2);
+                return `
+                    <g class="vector-item" ${deleteAttr} ${opacityAttr} ${getRotTransform(midX, midY)}>
+                        <line x1="${vec.x1}" y1="${vec.y1}" x2="${vec.x2}" y2="${vec.y2}" stroke="transparent" stroke-width="${hitSw}" stroke-linecap="round" />
+                        <line x1="${vec.x1}" y1="${vec.y1}" x2="${vec.x2}" y2="${vec.y2}" stroke="${hex}" stroke-width="${sw}" stroke-linecap="round" marker-end="url(#arrowhead-${vec.color || 'indigo'})" />
+                        ${renderEraseBadge(midX, midY)}
+                    </g>
+                `;
+            }
+            if (vec.type === 'shape') {
+                const x = Math.min(vec.x1, vec.x2);
+                const y = Math.min(vec.y1, vec.y2);
+                const w = Math.abs(vec.x2 - vec.x1);
+                const h = Math.abs(vec.y2 - vec.y1);
+                const cx = Math.round(x + w / 2);
+                const cy = Math.round(y + h / 2);
+                const strokeW = Math.max(2, sw * 0.75);
+                const st = vec.shapeType || 'rect';
+
+                let shapeSvg = '';
+                if (st === 'circle') {
+                    shapeSvg = `<ellipse cx="${cx}" cy="${cy}" rx="${Math.round(w / 2)}" ry="${Math.round(h / 2)}" fill="${hex}" fill-opacity="0.08" stroke="${hex}" stroke-width="${strokeW}" />`;
+                } else if (st === 'triangle') {
+                    const pts = `${cx},${y} ${x + w},${y + h} ${x},${y + h}`;
+                    shapeSvg = `<polygon points="${pts}" fill="${hex}" fill-opacity="0.08" stroke="${hex}" stroke-width="${strokeW}" stroke-linejoin="round" />`;
+                } else if (st === 'diamond') {
+                    const pts = `${cx},${y} ${x + w},${cy} ${cx},${y + h} ${x},${cy}`;
+                    shapeSvg = `<polygon points="${pts}" fill="${hex}" fill-opacity="0.08" stroke="${hex}" stroke-width="${strokeW}" stroke-linejoin="round" />`;
+                } else if (st === 'hexagon') {
+                    const dx = Math.round(w * 0.25);
+                    const pts = `${x + dx},${y} ${x + w - dx},${y} ${x + w},${cy} ${x + w - dx},${y + h} ${x + dx},${y + h} ${x},${cy}`;
+                    shapeSvg = `<polygon points="${pts}" fill="${hex}" fill-opacity="0.08" stroke="${hex}" stroke-width="${strokeW}" stroke-linejoin="round" />`;
+                } else {
+                    shapeSvg = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="18" fill="${hex}" fill-opacity="0.08" stroke="${hex}" stroke-width="${strokeW}" stroke-dasharray="8,6" />`;
+                }
+
+                return `
+                    <g class="vector-shape-group" ${deleteAttr} ${opacityAttr} ${getRotTransform(cx, cy)}>
+                        ${shapeSvg}
+                        ${renderEraseBadge(x + w, y)}
+                    </g>
+                `;
+            }
+            return '';
+        }
+
+        function renderVectorPreview() {
+            const previewLayer = document.getElementById('vector-preview-layer');
+            if (!currentVector) {
+                previewLayer.innerHTML = '';
+                return;
+            }
+            previewLayer.innerHTML = buildVectorSvgHtml(currentVector, true);
+        }
+
+        function renderAllVectors() {
+            const layer = document.getElementById('vectors-layer');
+            if (layer) {
+                layer.innerHTML = state.vectors.map(v => buildVectorSvgHtml(v, false)).join('');
+            }
+            renderEraserHandles();
+        }
+
+        function renderEraserHandles() {
+            const itemsLayer = document.getElementById('items-layer');
+            const chipsBox = document.getElementById('eraser-list-chips');
+            if (!itemsLayer) return;
+
+            // Rimuovi eventuali vecchie maniglie
+            itemsLayer.querySelectorAll('.vector-hover-zone, .vector-eraser-btn').forEach(el => el.remove());
+            if (chipsBox) chipsBox.innerHTML = '';
+
+            const canDelete = state.role === 'teacher' || !state.isFrozen;
+            if (!canDelete) return;
+
+            const typeLabels = { pen: 'Tratto', arrow: 'Freccia', shape: 'Riquadro' };
+            const isEraserMode = state.activeTool === 'eraser';
+            const isSelectOrEraser = state.activeTool === 'select' || isEraserMode;
+
+            state.vectors.forEach((vec, index) => {
+                let minX = 0, minY = 0, maxX = 0, maxY = 0;
+                let bx = 60, by = 60;
+
+                if (vec.type === 'pen' && Array.isArray(vec.points) && vec.points.length > 0) {
+                    const xs = vec.points.map(p => Number(p.x) || 0);
+                    const ys = vec.points.map(p => Number(p.y) || 0);
+                    minX = Math.min(...xs);
+                    maxX = Math.max(...xs);
+                    minY = Math.min(...ys);
+                    maxY = Math.max(...ys);
+                    // Angolo in alto a destra del disegno a mano libera
+                    bx = maxX;
+                    by = minY;
+                } else if (vec.type === 'arrow') {
+                    const x1 = Number(vec.x1) || 0, y1 = Number(vec.y1) || 0;
+                    const x2 = Number(vec.x2) || 0, y2 = Number(vec.y2) || 0;
+                    minX = Math.min(x1, x2);
+                    maxX = Math.max(x1, x2);
+                    minY = Math.min(y1, y2);
+                    maxY = Math.max(y1, y2);
+                    // Punta o angolo superiore destro della freccia
+                    bx = x2;
+                    by = y2;
+                } else if (vec.type === 'shape') {
+                    const x1 = Number(vec.x1) || 0, y1 = Number(vec.y1) || 0;
+                    const x2 = Number(vec.x2) || 0, y2 = Number(vec.y2) || 0;
+                    minX = Math.min(x1, x2);
+                    maxX = Math.max(x1, x2);
+                    minY = Math.min(y1, y2);
+                    maxY = Math.max(y1, y2);
+                    // Angolo in alto a destra del riquadro
+                    bx = maxX;
+                    by = minY;
+                }
+
+                // Zona hover trasparente attorno al disegno/riquadro/freccia (attiva in modalità Selezione e Gomma)
+                const zone = document.createElement('div');
+                zone.className = `vector-hover-zone absolute group ${isSelectOrEraser ? 'pointer-events-auto' : 'pointer-events-none'} ${state.activeTool === 'select' ? 'cursor-grab hover:ring-2 hover:ring-indigo-400/50 hover:bg-indigo-500/5 rounded-xl' : ''}`;
+                const pad = 14;
+                const zLeft = Math.max(0, minX - pad);
+                const zTop = Math.max(0, minY - pad);
+                const zWidth = Math.max(32, (maxX - minX) + pad * 2);
+                const zHeight = Math.max(32, (maxY - minY) + pad * 2);
+
+                zone.style.left = `${zLeft}px`;
+                zone.style.top = `${zTop}px`;
+                zone.style.width = `${zWidth}px`;
+                zone.style.height = `${zHeight}px`;
+                zone.style.zIndex = '8';
+                zone.style.transform = `rotate(${Number(vec.rotation) || 0}deg)`;
+                zone.style.transformOrigin = 'center center';
+                if (state.activeTool === 'select') {
+                    zone.title = `Trascina per spostare ${typeLabels[vec.type] || 'segno'}`;
+                    attachVectorDragHandlers(zone, vec);
+                }
+
+                // Maniglia di rotazione in alto al centro (visibile al passaggio del mouse)
+                if (state.activeTool === 'select') {
+                    const rotBtn = document.createElement('button');
+                    rotBtn.type = 'button';
+                    rotBtn.className = 'vector-rotate-btn pointer-events-auto opacity-0 group-hover:opacity-100 absolute -top-6 left-1/2 -translate-x-1/2 w-5 h-5 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] shadow-md border border-white flex items-center justify-center cursor-grab transition-opacity';
+                    rotBtn.textContent = '↻';
+                    rotBtn.title = `Trascina per ruotare ${typeLabels[vec.type] || 'segno'}`;
+                    attachVectorRotateHandler(zone, rotBtn, vec);
+                    zone.appendChild(rotBtn);
+                }
+
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                // Piccola x rossa nell'angolo: visibile solo al passaggio del mouse (group-hover:opacity-100), o sempre se è attiva la Gomma
+                btn.className = `vector-eraser-btn pointer-events-auto absolute w-5 h-5 rounded-full bg-rose-600 hover:bg-rose-700 active:scale-90 text-white font-bold text-xs shadow-md border border-white flex items-center justify-center cursor-pointer transition-opacity ${isEraserMode ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`;
+                btn.style.left = `${Math.max(0, bx - zLeft - 10)}px`;
+                btn.style.top = `${Math.max(0, by - zTop - 10)}px`;
+                btn.textContent = '×';
+                btn.title = `Elimina ${typeLabels[vec.type] || 'segno'}`;
+                btn.addEventListener('pointerdown', (e) => {
+                    e.stopPropagation();
+                    eraseVectorById(vec.id, e);
+                });
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    eraseVectorById(vec.id, e);
+                });
+
+                zone.appendChild(btn);
+                itemsLayer.appendChild(zone);
+
+                if (isEraserMode && chipsBox) {
+                    const chip = document.createElement('button');
+                    chip.type = 'button';
+                    chip.className = 'px-2 py-0.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold cursor-pointer';
+                    chip.textContent = `${typeLabels[vec.type] || 'Segno'} #${index + 1} ×`;
+                    chip.onclick = () => eraseVectorById(vec.id);
+                    chipsBox.appendChild(chip);
+                }
+            });
+        }
+
+        function attachVectorDragHandlers(zone, vec) {
+            let isDragging = false;
+            let startX = 0, startY = 0;
+            let origPoints = null;
+            let origX1 = 0, origY1 = 0, origX2 = 0, origY2 = 0;
+            let origLeft = 0, origTop = 0;
+
+            const onMove = (e) => {
+                if (!isDragging) return;
+                if (e.cancelable) e.preventDefault();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+                const dx = Math.round((clientX - startX) / state.zoom);
+                const dy = Math.round((clientY - startY) / state.zoom);
+
+                if (vec.type === 'pen' && origPoints) {
+                    vec.points = origPoints.map(p => ({
+                        x: Math.max(0, Math.min(3000, p.x + dx)),
+                        y: Math.max(0, Math.min(2000, p.y + dy))
+                    }));
+                } else {
+                    vec.x1 = Math.max(0, Math.min(3000, origX1 + dx));
+                    vec.y1 = Math.max(0, Math.min(2000, origY1 + dy));
+                    vec.x2 = Math.max(0, Math.min(3000, origX2 + dx));
+                    vec.y2 = Math.max(0, Math.min(2000, origY2 + dy));
+                }
+
+                zone.style.left = `${Math.max(0, origLeft + dx)}px`;
+                zone.style.top = `${Math.max(0, origTop + dy)}px`;
+
+                const layer = document.getElementById('vectors-layer');
+                if (layer) {
+                    layer.innerHTML = state.vectors.map(v => buildVectorSvgHtml(v, false)).join('');
+                }
+            };
+
+            const onEnd = () => {
+                if (!isDragging) return;
+                isDragging = false;
+                zone.classList.remove('cursor-grabbing');
+                zone.classList.add('cursor-grab');
+                window.removeEventListener('mousemove', onMove);
+                window.removeEventListener('mouseup', onEnd);
+                window.removeEventListener('touchmove', onMove);
+                window.removeEventListener('touchend', onEnd);
+
+                renderAllVectors();
+
+                if (state.role === 'teacher') {
+                    broadcastState();
+                } else {
+                    sendToHost({
+                        type: 'MOVE_VECTOR',
+                        payload: {
+                            id: vec.id,
+                            points: vec.points,
+                            x1: vec.x1,
+                            y1: vec.y1,
+                            x2: vec.x2,
+                            y2: vec.y2
+                        }
+                    });
+                }
+            };
+
+            const onStart = (e) => {
+                if (e.target.closest('button')) return;
+                if (state.activeTool !== 'select') return;
+                if (state.isFrozen && state.role !== 'teacher') return;
+                e.stopPropagation();
+
+                isDragging = true;
+                zone.classList.remove('cursor-grab');
+                zone.classList.add('cursor-grabbing');
+
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                startX = clientX;
+                startY = clientY;
+                origLeft = parseFloat(zone.style.left) || 0;
+                origTop = parseFloat(zone.style.top) || 0;
+
+                if (vec.type === 'pen' && Array.isArray(vec.points)) {
+                    origPoints = vec.points.map(p => ({ x: p.x, y: p.y }));
+                } else {
+                    origX1 = vec.x1;
+                    origY1 = vec.y1;
+                    origX2 = vec.x2;
+                    origY2 = vec.y2;
+                }
+
+                window.addEventListener('mousemove', onMove);
+                window.addEventListener('mouseup', onEnd);
+                window.addEventListener('touchmove', onMove, { passive: false });
+                window.addEventListener('touchend', onEnd);
+            };
+
+            zone.addEventListener('mousedown', onStart);
+            zone.addEventListener('touchstart', onStart, { passive: true });
+        }
+
+        function attachVectorRotateHandler(zone, handle, vec) {
+            let isRotating = false;
+
+            const onRotateMove = (e) => {
+                if (!isRotating) return;
+                if (e.cancelable) e.preventDefault();
+                const rect = zone.getBoundingClientRect();
+                const cx = rect.left + rect.width / 2;
+                const cy = rect.top + rect.height / 2;
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+                let angle = Math.round(Math.atan2(clientY - cy, clientX - cx) * (180 / Math.PI) + 90);
+                // Calamita leggera sugli angoli dritti (0°, 90°, 180°, -90°)
+                for (const snap of [0, 90, 180, -90, -180, 270]) {
+                    if (Math.abs(angle - snap) <= 4) { angle = snap; break; }
+                }
+
+                vec.rotation = angle;
+                zone.style.transform = `rotate(${angle}deg)`;
+                const layer = document.getElementById('vectors-layer');
+                if (layer) {
+                    layer.innerHTML = state.vectors.map(v => buildVectorSvgHtml(v, false)).join('');
+                }
+            };
+
+            const onRotateEnd = () => {
+                if (!isRotating) return;
+                isRotating = false;
+                window.removeEventListener('mousemove', onRotateMove);
+                window.removeEventListener('mouseup', onRotateEnd);
+                window.removeEventListener('touchmove', onRotateMove);
+                window.removeEventListener('touchend', onRotateEnd);
+
+                renderAllVectors();
+                if (state.role === 'teacher') {
+                    broadcastState();
+                } else {
+                    sendToHost({
+                        type: 'MOVE_VECTOR',
+                        payload: {
+                            id: vec.id,
+                            points: vec.points,
+                            x1: vec.x1,
+                            y1: vec.y1,
+                            x2: vec.x2,
+                            y2: vec.y2,
+                            rotation: vec.rotation || 0
+                        }
+                    });
+                }
+            };
+
+            const onRotateStart = (e) => {
+                e.stopPropagation();
+                if (e.cancelable) e.preventDefault();
+                if (state.isFrozen && state.role !== 'teacher') return;
+                isRotating = true;
+                window.addEventListener('mousemove', onRotateMove);
+                window.addEventListener('mouseup', onRotateEnd);
+                window.addEventListener('touchmove', onRotateMove, { passive: false });
+                window.addEventListener('touchend', onRotateEnd);
+            };
+
+            handle.addEventListener('mousedown', onRotateStart);
+            handle.addEventListener('touchstart', onRotateStart, { passive: false });
+        }
+
+        function eraseVectorById(id, e) {
+            if (e) {
+                if (e.cancelable) e.preventDefault();
+                e.stopPropagation();
+            }
+            if (state.isFrozen && state.role !== 'teacher') return;
+
+            const prevLen = state.vectors.length;
+            state.vectors = state.vectors.filter(v => v.id !== id);
+            if (state.vectors.length === prevLen) return;
+
+            renderAllVectors();
+            updateBoardEmptyState();
+
+            if (state.role === 'teacher') {
+                broadcastState();
+            } else {
+                sendToHost({ type: 'DELETE_VECTOR', payload: id });
+            }
+        }
+
+        function undoLastVector() {
+            if (state.isFrozen && state.role !== 'teacher') return;
+            if (state.vectors.length === 0) return;
+
+            const last = state.vectors[state.vectors.length - 1];
+            eraseVectorById(last.id);
+        }
+
+        function clearAllVectors() {
+            if (state.isFrozen && state.role !== 'teacher') return;
+            if (state.vectors.length === 0) return;
+
+            const ids = state.vectors.map(v => v.id);
+            state.vectors = [];
+            renderAllVectors();
+            updateBoardEmptyState();
+
+            if (state.role === 'teacher') {
+                broadcastState();
+            } else {
+                ids.forEach(id => sendToHost({ type: 'DELETE_VECTOR', payload: id }));
+            }
+            showToast('Tutti i disegni sono stati cancellati.', 'info');
+        }
+
+        function selectNoteColor(color) {
+            state.selectedColor = color;
+            document.querySelectorAll('.color-dot').forEach(dot => {
+                if (dot.dataset.color === color) {
+                    dot.classList.remove('border-transparent');
+                    dot.classList.add('border-slate-800', 'scale-110');
+                } else {
+                    dot.classList.add('border-transparent');
+                    dot.classList.remove('border-slate-800', 'scale-110');
+                }
+            });
+        }
+
+        function focusNewNoteInput() {
+            setActiveTool('select');
+            const input = document.getElementById('new-note-input');
+            if (input) {
+                input.focus();
+                input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function handleCreateNote(e) {
+            e.preventDefault();
+            if (state.isFrozen && state.role !== 'teacher') {
+                showToast('La lavagna è bloccata dal docente.', 'error');
+                return;
+            }
+            const input = document.getElementById('new-note-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            createBoardItem({ type: 'note', text });
+            input.value = '';
+            setActiveTool('select');
+        }
+
+        function createBoardItem(data) {
+            const isTeacher = state.role === 'teacher';
+            if (state.isFrozen && !isTeacher) {
+                showToast('La lavagna è bloccata dal docente.', 'error');
+                return;
+            }
+
+            const type = data.type || 'note';
+            const viewport = document.getElementById('board-viewport');
+            const centerX = Math.round(((viewport ? viewport.scrollLeft : 0) + (viewport ? viewport.clientWidth / 2 : 450)) / state.zoom) - 110;
+            const centerY = Math.round(((viewport ? viewport.scrollTop : 0) + (viewport ? viewport.clientHeight / 2 : 320)) / state.zoom) - 75;
+            const jitterX = ((state.items.length % 5) - 2) * 28;
+            const jitterY = ((state.items.length % 4) - 1) * 24;
+            const defaultX = Math.max(80, centerX + jitterX);
+            const defaultY = Math.max(80, centerY + jitterY);
+
+            const item = {
+                id: 'item-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+                type: type,
+                text: data.text || '',
+                imageUrl: data.imageUrl || '',
+                width: data.width || (type === 'image' ? 280 : (type === 'note' ? 225 : null)),
+                height: data.height || (type === 'note' ? 150 : null),
+                color: data.color || state.selectedColor,
+                author: data.author || state.userName,
+                authorId: data.authorId || state.userId,
+                group: data.group || state.myGroup || null,
+                x: typeof data.x === 'number' ? data.x : defaultX,
+                y: typeof data.y === 'number' ? data.y : defaultY,
+                rotation: typeof data.rotation === 'number' ? data.rotation : 0,
+                votes: 0,
+                votedBy: [],
+                zIndex: ++state.maxZIndex
+            };
+
+            state.items.push(item);
+            renderSingleItem(item);
+            updateBoardEmptyState();
+
+            if (isTeacher) {
+                broadcastState();
+            } else {
+                sendToHost({ type: 'ADD_ITEM', payload: item });
+            }
+        }
+
+        function renderAllItems() {
+            const container = document.getElementById('items-layer');
+            container.innerHTML = '';
+            state.items.forEach(item => renderSingleItem(item));
+            updateBoardEmptyState();
+            lucide.createIcons();
+        }
+
+        function renderSingleItem(item) {
+            const container = document.getElementById('items-layer');
+            const existing = document.getElementById(item.id);
+            if (existing) existing.remove();
+
+            const isOwner = item.authorId === state.userId;
+            const canEditOrDelete = state.role === 'teacher' || isOwner;
+            const canMove = state.role === 'teacher' || !state.isFrozen;
+
+            if (item.type === 'stamp') {
+                const el = document.createElement('div');
+                el.id = item.id;
+                el.style.left = `${item.x}px`;
+                el.style.top = `${item.y}px`;
+                el.style.zIndex = item.zIndex || 10;
+                el.style.transform = `rotate(${item.rotation || 0}deg)`;
+                el.className = `board-item pointer-events-auto absolute select-none group ${canMove ? 'cursor-grab' : 'cursor-default'}`;
+                el.innerHTML = `
+                    <div class="relative text-5xl drop-shadow-md transition-transform group-hover:scale-110" title="Timbro di ${escapeHtml(item.author)}">
+                        ${item.text}
+                        ${canMove ? `
+                        <button type="button" class="item-rotate-handle opacity-0 group-hover:opacity-100 absolute -top-6 left-1/2 -translate-x-1/2 w-5 h-5 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold flex items-center justify-center shadow-md border border-white cursor-grab transition-opacity" title="Trascina per ruotare">↻</button>` : ''}
+                        ${canEditOrDelete ? `
+                        <button type="button" onclick="deleteItem('${item.id}')" title="Elimina timbro"
+                            class="opacity-0 group-hover:opacity-100 absolute -top-2 -right-2 w-5 h-5 rounded-full bg-rose-600 text-white text-xs flex items-center justify-center shadow-md cursor-pointer transition-opacity">
+                            ×
+                        </button>` : ''}
+                    </div>
+                `;
+                container.appendChild(el);
+                if (canMove) {
+                    attachDragHandlers(el, item);
+                    attachRotateHandler(el, item);
+                }
+                return;
+            }
+
+            if (item.type === 'image') {
+                const el = document.createElement('div');
+                el.id = item.id;
+                el.style.left = `${item.x}px`;
+                el.style.top = `${item.y}px`;
+                el.style.width = `${item.width || 280}px`;
+                el.style.zIndex = item.zIndex || 10;
+                el.style.transform = `rotate(${item.rotation || 0}deg)`;
+                el.className = `board-item pointer-events-auto absolute bg-white border-2 border-slate-200 rounded-2xl p-2 shadow-lg flex flex-col select-none group ${canMove ? 'cursor-grab' : 'cursor-default'}`;
+                el.innerHTML = `
+                    ${canMove ? `
+                    <button type="button" class="item-rotate-handle opacity-0 group-hover:opacity-100 absolute -top-6 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center shadow-md border-2 border-white cursor-grab transition-opacity" title="Trascina per ruotare">↻</button>` : ''}
+                    <div class="flex items-center justify-between text-[11px] font-bold text-slate-500 px-1 mb-1">
+                        <span class="truncate">🖼️ ${escapeHtml(item.author)}</span>
+                        ${canEditOrDelete ? `
+                        <button type="button" onclick="deleteItem('${item.id}')" title="Elimina immagine"
+                            class="p-1 rounded-lg hover:bg-rose-100 text-rose-600 cursor-pointer">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>` : ''}
+                    </div>
+                    <img src="${item.imageUrl}" alt="Immagine condivisa" class="w-full h-auto rounded-xl object-contain pointer-events-none max-h-[65vh]">
+                    ${canMove ? `
+                    <div class="img-resize-handle absolute -bottom-2.5 -right-2.5 w-7 h-7 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-md flex items-center justify-center cursor-nwse-resize border-2 border-white" title="Trascina per ingrandire o rimpicciolire">
+                        <i data-lucide="scaling" class="w-3.5 h-3.5 pointer-events-none"></i>
+                    </div>` : ''}
+                `;
+                container.appendChild(el);
+                if (canMove) {
+                    attachDragHandlers(el, item);
+                    attachResizeHandler(el, item);
+                    attachRotateHandler(el, item);
+                }
+                lucide.createIcons();
+                return;
+            }
+
+            const style = NOTE_STYLES[item.color] || NOTE_STYLES.yellow;
+            const hasVoted = (item.votedBy || []).includes(state.userId);
+            const groupBadge = item.group ? `<span class="px-1.5 py-0.5 rounded-md bg-white/70 text-[10px] font-extrabold uppercase">Gr.${item.group}</span>` : '';
+
+            const el = document.createElement('div');
+            el.id = item.id;
+            el.style.left = `${item.x}px`;
+            el.style.top = `${item.y}px`;
+            el.style.width = `${item.width || 225}px`;
+            el.style.minHeight = `${item.height || 145}px`;
+            el.style.zIndex = item.zIndex || 10;
+            el.style.transform = `rotate(${item.rotation || 0}deg)`;
+            el.className = `sticky-note pointer-events-auto absolute ${style.bg} ${style.border} ${style.text} border-2 rounded-2xl p-3.5 shadow-md flex flex-col justify-between select-none group ${canMove ? 'cursor-grab' : 'cursor-default'}`;
+
+            el.innerHTML = `
+                ${canMove ? `
+                <button type="button" class="item-rotate-handle opacity-0 group-hover:opacity-100 absolute -top-6 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center shadow-md border-2 border-white cursor-grab transition-opacity" title="Trascina per ruotare il post-it">↻</button>` : ''}
+                <div class="flex items-center justify-between gap-1 mb-2 pb-1.5 border-b border-black/10">
+                    <div class="flex items-center gap-1.5 min-w-0">
+                        <span class="w-2 h-2 rounded-full ${style.badge} shrink-0"></span>
+                        <span class="text-xs font-extrabold truncate opacity-85">${escapeHtml(item.author)}</span>
+                        ${groupBadge}
+                    </div>
+                    <div class="flex items-center gap-0.5 shrink-0">
+                        ${canEditOrDelete ? `
+                        <button type="button" onclick="openEditNoteModal('${item.id}')" title="Modifica testo"
+                            class="p-1 rounded-lg hover:bg-black/10 transition-colors cursor-pointer">
+                            <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                        </button>
+                        <button type="button" onclick="deleteItem('${item.id}')" title="Elimina"
+                            class="p-1 rounded-lg hover:bg-rose-500/20 text-rose-700 transition-colors cursor-pointer">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>` : ''}
+                    </div>
+                </div>
+                <div class="text-sm sm:text-base font-medium leading-snug whitespace-pre-wrap break-words flex-1">${escapeHtml(item.text)}</div>
+                <div class="mt-3 pt-1.5 flex items-center justify-between pr-3">
+                    <button type="button" onclick="toggleVote('${item.id}')"
+                        class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold transition-all cursor-pointer ${hasVoted ? 'bg-rose-600 text-white shadow-xs' : 'bg-white/60 hover:bg-white text-slate-700'}">
+                        <span>❤️</span>
+                        <span>${item.votes || 0}</span>
+                    </button>
+                    ${canEditOrDelete ? `
+                    <div class="flex items-center gap-1 bg-white/60 px-1.5 py-1 rounded-full" title="Scegli colore post-it">
+                        <button type="button" onclick="setNoteColorById('${item.id}', 'yellow')" title="Giallo"
+                            class="w-3.5 h-3.5 rounded-full bg-amber-300 border ${item.color === 'yellow' ? 'border-slate-900 scale-110' : 'border-black/20 hover:scale-110'} transition-transform cursor-pointer"></button>
+                        <button type="button" onclick="setNoteColorById('${item.id}', 'blue')" title="Azzurro"
+                            class="w-3.5 h-3.5 rounded-full bg-sky-300 border ${item.color === 'blue' ? 'border-slate-900 scale-110' : 'border-black/20 hover:scale-110'} transition-transform cursor-pointer"></button>
+                        <button type="button" onclick="setNoteColorById('${item.id}', 'pink')" title="Rosa"
+                            class="w-3.5 h-3.5 rounded-full bg-rose-300 border ${item.color === 'pink' ? 'border-slate-900 scale-110' : 'border-black/20 hover:scale-110'} transition-transform cursor-pointer"></button>
+                        <button type="button" onclick="setNoteColorById('${item.id}', 'green')" title="Verde"
+                            class="w-3.5 h-3.5 rounded-full bg-emerald-300 border ${item.color === 'green' ? 'border-slate-900 scale-110' : 'border-black/20 hover:scale-110'} transition-transform cursor-pointer"></button>
+                        <button type="button" onclick="setNoteColorById('${item.id}', 'purple')" title="Viola"
+                            class="w-3.5 h-3.5 rounded-full bg-purple-300 border ${item.color === 'purple' ? 'border-slate-900 scale-110' : 'border-black/20 hover:scale-110'} transition-transform cursor-pointer"></button>
+                    </div>` : ''}
+                </div>
+                ${canMove ? `
+                <div class="item-resize-handle opacity-80 group-hover:opacity-100 absolute -bottom-2 -right-2 w-6 h-6 rounded-full bg-slate-800 hover:bg-indigo-600 text-white shadow-md flex items-center justify-center cursor-nwse-resize border-2 border-white transition-colors" title="Trascina per ridimensionare il post-it">
+                    <i data-lucide="scaling" class="w-3 h-3 pointer-events-none"></i>
+                </div>` : ''}
+            `;
+
+            container.appendChild(el);
+            if (canMove) {
+                attachDragHandlers(el, item);
+                attachResizeHandler(el, item);
+                attachRotateHandler(el, item);
+            }
+            lucide.createIcons();
+        }
+
+        function attachRotateHandler(element, item) {
+            const handle = element.querySelector('.item-rotate-handle');
+            if (!handle) return;
+
+            let isRotating = false;
+
+            const onRotateMove = (e) => {
+                if (!isRotating) return;
+                if (e.cancelable) e.preventDefault();
+                const rect = element.getBoundingClientRect();
+                const cx = rect.left + rect.width / 2;
+                const cy = rect.top + rect.height / 2;
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+                let angle = Math.round(Math.atan2(clientY - cy, clientX - cx) * (180 / Math.PI) + 90);
+                for (const snap of [0, 90, 180, -90, -180, 270]) {
+                    if (Math.abs(angle - snap) <= 4) { angle = snap; break; }
+                }
+
+                item.rotation = angle;
+                element.style.transform = `rotate(${angle}deg)`;
+            };
+
+            const onRotateEnd = () => {
+                if (!isRotating) return;
+                isRotating = false;
+                window.removeEventListener('mousemove', onRotateMove);
+                window.removeEventListener('mouseup', onRotateEnd);
+                window.removeEventListener('touchmove', onRotateMove);
+                window.removeEventListener('touchend', onRotateEnd);
+
+                if (state.role === 'teacher') {
+                    broadcastState();
+                } else {
+                    sendToHost({
+                        type: 'ROTATE_ITEM',
+                        payload: { id: item.id, rotation: item.rotation || 0 }
+                    });
+                }
+            };
+
+            const onRotateStart = (e) => {
+                e.stopPropagation();
+                if (e.cancelable) e.preventDefault();
+                if (state.isFrozen && state.role !== 'teacher') return;
+                isRotating = true;
+                item.zIndex = ++state.maxZIndex;
+                element.style.zIndex = item.zIndex;
+
+                window.addEventListener('mousemove', onRotateMove);
+                window.addEventListener('mouseup', onRotateEnd);
+                window.addEventListener('touchmove', onRotateMove, { passive: false });
+                window.addEventListener('touchend', onRotateEnd);
+            };
+
+            handle.addEventListener('mousedown', onRotateStart);
+            handle.addEventListener('touchstart', onRotateStart, { passive: false });
+        }
+
+        function attachResizeHandler(element, item) {
+            const handle = element.querySelector('.img-resize-handle, .item-resize-handle');
+            if (!handle) return;
+
+            let isResizing = false;
+            let startX = 0;
+            let startY = 0;
+            let startWidth = item.width || 225;
+            let startHeight = item.height || 145;
+
+            const onResizeStart = (e) => {
+                e.stopPropagation();
+                if (e.cancelable) e.preventDefault();
+                isResizing = true;
+                startX = e.touches ? e.touches[0].clientX : e.clientX;
+                startY = e.touches ? e.touches[0].clientY : e.clientY;
+                startWidth = item.width || element.offsetWidth || 225;
+                startHeight = item.height || element.offsetHeight || 145;
+            };
+
+            const onResizeMove = (e) => {
+                if (!isResizing) return;
+                if (e.cancelable) e.preventDefault();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                const dx = (clientX - startX) / state.zoom;
+                const dy = (clientY - startY) / state.zoom;
+
+                if (item.type === 'image') {
+                    const newWidth = Math.max(120, Math.min(900, Math.round(startWidth + dx)));
+                    item.width = newWidth;
+                    element.style.width = `${newWidth}px`;
+                } else if (e.shiftKey) {
+                    // Mantiene le proporzioni originali del post-it premendo Shift
+                    const ratio = startHeight / Math.max(1, startWidth);
+                    const newWidth = Math.max(170, Math.min(650, Math.round(startWidth + dx)));
+                    const newHeight = Math.max(120, Math.min(550, Math.round(newWidth * ratio)));
+                    item.width = newWidth;
+                    item.height = newHeight;
+                    element.style.width = `${newWidth}px`;
+                    element.style.minHeight = `${newHeight}px`;
+                } else {
+                    const newWidth = Math.max(170, Math.min(650, Math.round(startWidth + dx)));
+                    const newHeight = Math.max(120, Math.min(550, Math.round(startHeight + dy)));
+                    item.width = newWidth;
+                    item.height = newHeight;
+                    element.style.width = `${newWidth}px`;
+                    element.style.minHeight = `${newHeight}px`;
+                }
+            };
+
+            const onResizeEnd = () => {
+                if (!isResizing) return;
+                isResizing = false;
+                if (state.role === 'teacher') {
+                    broadcastState();
+                } else {
+                    sendToHost({
+                        type: 'RESIZE_ITEM',
+                        payload: { id: item.id, width: item.width, height: item.height }
+                    });
+                }
+            };
+
+            handle.addEventListener('mousedown', onResizeStart);
+            handle.addEventListener('touchstart', onResizeStart, { passive: false });
+            window.addEventListener('mousemove', onResizeMove);
+            window.addEventListener('touchmove', onResizeMove, { passive: false });
+            window.addEventListener('mouseup', onResizeEnd);
+            window.addEventListener('touchend', onResizeEnd);
+        }
+
+        function attachDragHandlers(element, item) {
+            let isDragging = false;
+            let startX = 0, startY = 0;
+            let origX = 0, origY = 0;
+
+            const onMove = (e) => {
+                if (!isDragging) return;
+                if (e.cancelable) e.preventDefault();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+                const dx = (clientX - startX) / state.zoom;
+                const dy = (clientY - startY) / state.zoom;
+
+                item.x = Math.max(0, Math.min(3000, Math.round(origX + dx)));
+                item.y = Math.max(0, Math.min(2000, Math.round(origY + dy)));
+
+                element.style.left = `${item.x}px`;
+                element.style.top = `${item.y}px`;
+            };
+
+            const onEnd = () => {
+                if (!isDragging) return;
+                isDragging = false;
+                element.classList.remove('is-dragging');
+                window.removeEventListener('mousemove', onMove);
+                window.removeEventListener('mouseup', onEnd);
+                window.removeEventListener('touchmove', onMove);
+                window.removeEventListener('touchend', onEnd);
+
+                if (state.role === 'teacher') {
+                    broadcastState();
+                } else {
+                    sendToHost({
+                        type: 'MOVE_ITEM',
+                        payload: { id: item.id, x: item.x, y: item.y, zIndex: item.zIndex }
+                    });
+                }
+            };
+
+            const onStart = (e) => {
+                if (e.target.closest('button') || e.target.closest('.img-resize-handle') || e.target.closest('.item-resize-handle') || e.target.closest('.item-rotate-handle')) return;
+                if (state.isFrozen && state.role !== 'teacher') return;
+                e.stopPropagation();
+
+                isDragging = true;
+                element.classList.add('is-dragging');
+                item.zIndex = ++state.maxZIndex;
+                element.style.zIndex = item.zIndex;
+
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                startX = clientX;
+                startY = clientY;
+                origX = item.x;
+                origY = item.y;
+
+                window.addEventListener('mousemove', onMove);
+                window.addEventListener('mouseup', onEnd);
+                window.addEventListener('touchmove', onMove, { passive: false });
+                window.addEventListener('touchend', onEnd);
+            };
+
+            element.addEventListener('mousedown', onStart);
+            element.addEventListener('touchstart', onStart, { passive: true });
+        }
+
+        function deleteItem(id) {
+            state.items = state.items.filter(n => n.id !== id);
+            const el = document.getElementById(id);
+            if (el) el.remove();
+            updateBoardEmptyState();
+
+            if (state.role === 'teacher') {
+                broadcastState();
+            } else {
+                sendToHost({ type: 'DELETE_ITEM', payload: id });
+            }
+        }
+
+        function toggleVote(id) {
+            const item = state.items.find(n => n.id === id);
+            if (!item) return;
+            if (!item.votedBy) item.votedBy = [];
+
+            const idx = item.votedBy.indexOf(state.userId);
+            if (idx === -1) {
+                item.votedBy.push(state.userId);
+                item.votes = (item.votes || 0) + 1;
+            } else {
+                item.votedBy.splice(idx, 1);
+                item.votes = Math.max(0, (item.votes || 1) - 1);
+            }
+
+            renderSingleItem(item);
+            if (state.role === 'teacher') {
+                broadcastState();
+            } else {
+                sendToHost({ type: 'VOTE_ITEM', payload: { id, userId: state.userId } });
+            }
+        }
+
+        function setNoteColorById(id, color) {
+            const item = state.items.find(n => n.id === id);
+            if (!item || !NOTE_STYLES[color]) return;
+            item.color = color;
+            renderSingleItem(item);
+            if (state.role === 'teacher') {
+                broadcastState();
+            } else {
+                sendToHost({ type: 'EDIT_ITEM', payload: { id: item.id, text: item.text, color: color } });
+            }
+        }
+
+        function openEditNoteModal(id) {
+            const item = state.items.find(n => n.id === id);
+            if (!item) return;
+            editingNoteId = id;
+            document.getElementById('edit-note-textarea').value = item.text;
+            document.getElementById('edit-note-modal').classList.remove('hidden');
+            document.getElementById('edit-note-textarea').focus();
+        }
+
+        function closeEditModal() {
+            editingNoteId = null;
+            document.getElementById('edit-note-modal').classList.add('hidden');
+        }
+
+        function saveEditedNote() {
+            if (!editingNoteId) return;
+            const newText = document.getElementById('edit-note-textarea').value.trim();
+            if (!newText) return;
+
+            const item = state.items.find(n => n.id === editingNoteId);
+            if (item) {
+                item.text = newText;
+                renderSingleItem(item);
+                if (state.role === 'teacher') {
+                    broadcastState();
+                } else {
+                    sendToHost({ type: 'EDIT_ITEM', payload: { id: item.id, text: newText } });
+                }
+            }
+            closeEditModal();
+        }
+
+        // ---------------- TITOLI E COLORI DELLE COLONNE / AREE ----------------
+        function openSectionModal(key) {
+            if (state.role !== 'teacher') return;
+            editingSectionKey = key;
+            document.getElementById('section-title-input').value = state.sectionTitles[key] || '';
+            const currentSecColor = (state.sectionColors && state.sectionColors[key]) || DEFAULT_SECTION_COLORS[key] || 'slate';
+            selectSectionColor(currentSecColor);
+            document.getElementById('section-title-modal').classList.remove('hidden');
+            document.getElementById('section-title-input').focus();
+        }
+
+        function selectSectionColor(colorKey) {
+            selectedSectionColor = colorKey;
+            document.querySelectorAll('.sec-color-btn').forEach(btn => {
+                if (btn.dataset.seccolor === colorKey) {
+                    btn.classList.add('ring-2', 'ring-slate-900', 'scale-105');
+                } else {
+                    btn.classList.remove('ring-2', 'ring-slate-900', 'scale-105');
+                }
+            });
+        }
+
+        function closeSectionModal() {
+            editingSectionKey = null;
+            document.getElementById('section-title-modal').classList.add('hidden');
+        }
+
+        function saveSectionTitle() {
+            if (!editingSectionKey) return;
+            const val = document.getElementById('section-title-input').value.trim();
+            if (val) {
+                state.sectionTitles[editingSectionKey] = val;
+            }
+            if (!state.sectionColors) state.sectionColors = { ...DEFAULT_SECTION_COLORS };
+            state.sectionColors[editingSectionKey] = selectedSectionColor;
+            closeSectionModal();
+            applyTemplateUI();
+            broadcastState();
+            showToast('Colonna aggiornata per tutta la classe!', 'success');
+        }
+
+        // ---------------- MODELLI DI LAVAGNA ----------------
+        function applyTemplateUI() {
+            const bgLayer = document.getElementById('template-bg-layer');
+            bgLayer.innerHTML = '';
+
+            document.querySelectorAll('.tpl-btn').forEach(btn => {
+                if (btn.dataset.tpl === state.template) {
+                    btn.className = 'tpl-btn px-3 py-2 rounded-xl border-2 border-indigo-600 bg-indigo-50 text-indigo-700 text-xs font-bold text-left cursor-pointer';
+                } else {
+                    btn.className = 'tpl-btn px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold text-left cursor-pointer';
+                }
+            });
+
+            const t = state.sectionTitles;
+            const c = state.sectionColors || DEFAULT_SECTION_COLORS;
+            const editHint = state.role === 'teacher' ? 'pointer-events-auto cursor-pointer hover:ring-2 hover:ring-indigo-400' : '';
+
+            const renderHeader = (key, fallbackColor) => {
+                const colorKey = c[key] || fallbackColor || 'slate';
+                const theme = SECTION_COLOR_THEMES[colorKey] || SECTION_COLOR_THEMES.slate;
+                return `
+                    <div onclick="event.stopPropagation(); openSectionModal('${key}')" title="${state.role === 'teacher' ? 'Clicca per modificare titolo e colore' : ''}"
+                        class="section-title-box relative z-20 ${editHint} inline-flex items-center gap-1.5 ${theme.header} font-extrabold text-sm sm:text-base uppercase tracking-wider px-3 py-1.5 rounded-xl mb-3 transition-all">
+                        <span>${escapeHtml(t[key] || '')}</span>
+                        ${state.role === 'teacher' ? '<i data-lucide="pencil" class="w-3.5 h-3.5 opacity-60 pointer-events-none"></i>' : ''}
+                    </div>
+                `;
+            };
+
+            const getBoxClasses = (key, fallbackColor) => {
+                const colorKey = c[key] || fallbackColor || 'slate';
+                const theme = SECTION_COLOR_THEMES[colorKey] || SECTION_COLOR_THEMES.slate;
+                return `${theme.bg} ${theme.border}`;
+            };
+
+            if (state.template === 'kanban') {
+                bgLayer.innerHTML = `
+                    <div class="grid grid-cols-3 gap-6 h-full p-8 pt-20">
+                        <div class="${getBoxClasses('col1', 'emerald')} border-2 border-dashed rounded-3xl p-5 flex flex-col">
+                            ${renderHeader('col1', 'emerald')}
+                        </div>
+                        <div class="${getBoxClasses('col2', 'amber')} border-2 border-dashed rounded-3xl p-5 flex flex-col">
+                            ${renderHeader('col2', 'amber')}
+                        </div>
+                        <div class="${getBoxClasses('col3', 'rose')} border-2 border-dashed rounded-3xl p-5 flex flex-col">
+                            ${renderHeader('col3', 'rose')}
+                        </div>
+                    </div>
+                `;
+            } else if (state.template === 'quadrants') {
+                bgLayer.innerHTML = `
+                    <div class="grid grid-cols-2 grid-rows-2 gap-6 h-full p-8 pt-20">
+                        <div class="${getBoxClasses('q1', 'amber')} border-2 rounded-3xl p-5">
+                            ${renderHeader('q1', 'amber')}
+                        </div>
+                        <div class="${getBoxClasses('q2', 'sky')} border-2 rounded-3xl p-5">
+                            ${renderHeader('q2', 'sky')}
+                        </div>
+                        <div class="${getBoxClasses('q3', 'rose')} border-2 rounded-3xl p-5">
+                            ${renderHeader('q3', 'rose')}
+                        </div>
+                        <div class="${getBoxClasses('q4', 'emerald')} border-2 rounded-3xl p-5">
+                            ${renderHeader('q4', 'emerald')}
+                        </div>
+                    </div>
+                `;
+            } else if (state.template === 'timeline') {
+                bgLayer.innerHTML = `
+                    <div class="relative w-full h-full flex items-center px-16 pt-12">
+                        <div class="w-full h-2 bg-indigo-200 rounded-full relative flex justify-between items-center">
+                            <div class="flex flex-col items-center -mt-20">
+                                ${renderHeader('t1', 'indigo')}
+                                <div class="w-6 h-6 rounded-full bg-indigo-600 border-4 border-white shadow-md"></div>
+                            </div>
+                            <div class="flex flex-col items-center -mt-20">
+                                ${renderHeader('t2', 'indigo')}
+                                <div class="w-6 h-6 rounded-full bg-indigo-600 border-4 border-white shadow-md"></div>
+                            </div>
+                            <div class="flex flex-col items-center -mt-20">
+                                ${renderHeader('t3', 'indigo')}
+                                <div class="w-6 h-6 rounded-full bg-indigo-600 border-4 border-white shadow-md"></div>
+                            </div>
+                            <div class="flex flex-col items-center -mt-20">
+                                ${renderHeader('t4', 'indigo')}
+                                <div class="w-6 h-6 rounded-full bg-indigo-600 border-4 border-white shadow-md"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (state.template === 'mindmap') {
+                bgLayer.innerHTML = `
+                    <div class="w-full h-full flex items-center justify-center">
+                        <div class="${getBoxClasses('center', 'indigo')} border-4 rounded-full w-64 h-64 flex flex-col items-center justify-center text-center p-6 shadow-sm">
+                            ${renderHeader('center', 'indigo')}
+                            <span class="text-xs text-slate-600 font-semibold">Collega le idee con le frecce</span>
+                        </div>
+                    </div>
+                `;
+            } else if (state.template === 'procon') {
+                bgLayer.innerHTML = `
+                    <div class="grid grid-cols-2 gap-8 h-full p-8 pt-20">
+                        <div class="${getBoxClasses('pro', 'emerald')} border-2 border-dashed rounded-3xl p-6">
+                            ${renderHeader('pro', 'emerald')}
+                        </div>
+                        <div class="${getBoxClasses('con', 'rose')} border-2 border-dashed rounded-3xl p-6">
+                            ${renderHeader('con', 'rose')}
+                        </div>
+                    </div>
+                `;
+            }
+            lucide.createIcons();
+        }
+
+        function changeTemplate(tpl) {
+            if (state.role !== 'teacher') return;
+            state.template = tpl;
+            applyTemplateUI();
+            broadcastState();
+            showToast('Modello lavagna aggiornato!', 'info');
+        }
+
+        // ---------------- MODALITÀ SQUADRE ----------------
+        function setTeamCount(count) {
+            if (state.role !== 'teacher') return;
+            state.teamCount = count;
+
+            document.querySelectorAll('.team-btn').forEach(btn => {
+                if (parseInt(btn.dataset.teams, 10) === count) {
+                    btn.className = 'team-btn py-2 rounded-xl bg-amber-500 text-white text-xs font-bold cursor-pointer';
+                } else {
+                    btn.className = 'team-btn py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-bold cursor-pointer';
+                }
+            });
+
+            if (count === 0) {
+                Object.keys(connectedStudents).forEach(uid => {
+                    connectedStudents[uid].group = null;
+                });
+                showToast('Modalità squadre disattivata.', 'info');
+            } else {
+                const studentIds = Object.keys(connectedStudents);
+                studentIds.forEach((uid, index) => {
+                    connectedStudents[uid].group = (index % count) + 1;
+                });
+                showToast(`Classe divisa in ${count} squadre!`, 'success');
+            }
+
+            updateParticipantsUI();
+            broadcastState();
+        }
+
+        function assignStudentGroup(studentId) {
+            if (state.teamCount === 0) return null;
+            if (connectedStudents[studentId] && connectedStudents[studentId].group) {
+                return connectedStudents[studentId].group;
+            }
+            const countExisting = Object.keys(connectedStudents).length;
+            return (countExisting % state.teamCount) + 1;
+        }
+
+        // ---------------- CARICAMENTO IMMAGINI ----------------
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const img = new Image();
+                img.onload = function () {
+                    const MAX_WIDTH = 420;
+                    const scale = Math.min(1, MAX_WIDTH / img.width);
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.round(img.width * scale);
+                    canvas.height = Math.round(img.height * scale);
+
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                    const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.72);
+                    createBoardItem({
+                        type: 'image',
+                        imageUrl: compressedDataUrl,
+                        width: Math.min(340, canvas.width)
+                    });
+                    showToast('Immagine aggiunta alla lavagna!', 'success');
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+            event.target.value = '';
+        }
+
+        // ---------------- GESTIONE PANNELLO DOCENTE E STANZA ----------------
+        function toggleTeacherPanel() {
+            const panel = document.getElementById('teacher-panel');
+            panel.classList.toggle('hidden');
+            updateParticipantsUI();
+        }
+
+        function openRoomModal() {
+            if (state.role !== 'teacher') {
+                showToast(`Sei nella stanza ${state.roomCode}.`, 'info');
+                return;
+            }
+            const url = new URL(window.location.href);
+            url.searchParams.set('room', state.roomCode);
+            const shareUrl = url.toString();
+
+            document.getElementById('modal-room-code').textContent = state.roomCode;
+            document.getElementById('modal-share-url').value = shareUrl;
+            document.getElementById('room-modal').classList.remove('hidden');
+            updateParticipantsUI();
+        }
+
+        function closeRoomModal() {
+            document.getElementById('room-modal').classList.add('hidden');
+        }
+
+        function copyShareLink() {
+            const input = document.getElementById('modal-share-url');
+            copyTextToClipboard(input.value, 'Link diretto copiato!');
+        }
+
+        function copyTextToClipboard(text, successMsg) {
+            const temp = document.createElement('textarea');
+            temp.value = text;
+            document.body.appendChild(temp);
+            temp.select();
+            try {
+                document.execCommand('copy');
+                showToast(successMsg, 'success');
+            } catch (err) {
+                showToast('Impossibile copiare automaticamente.', 'error');
+            }
+            document.body.removeChild(temp);
+        }
+
+        function updateParticipantsUI() {
+            const list = Object.values(connectedStudents);
+            document.getElementById('participants-count-badge').textContent = list.length;
+            document.getElementById('modal-student-count').textContent = list.length;
+
+            const container = document.getElementById('participants-list');
+            if (list.length === 0) {
+                container.innerHTML = `<span class="text-xs text-slate-400 italic">Nessuno studente ancora connesso...</span>`;
+                return;
+            }
+
+            const groupColors = {
+                1: 'bg-amber-100 text-amber-800 border-amber-300',
+                2: 'bg-sky-100 text-sky-800 border-sky-300',
+                3: 'bg-rose-100 text-rose-800 border-rose-300',
+                4: 'bg-emerald-100 text-emerald-800 border-emerald-300'
+            };
+
+            container.innerHTML = list.map(s => {
+                const gClass = s.group ? groupColors[s.group] : 'bg-slate-100 text-slate-700 border-slate-200';
+                const gLabel = s.group ? ` • Gr.${s.group}` : '';
+                return `<span class="inline-flex items-center px-2 py-0.5 rounded-lg border text-xs font-bold ${gClass}">${escapeHtml(s.name)}${gLabel}</span>`;
+            }).join('');
+        }
+
+        function toggleFreezeBoard() {
+            if (state.role !== 'teacher') return;
+            state.isFrozen = !state.isFrozen;
+            updateFreezeUI();
+            broadcastState();
+            showToast(state.isFrozen ? 'Lavagna bloccata per gli studenti.' : 'Lavagna sbloccata!', 'info');
+        }
+
+        function updateFreezeUI() {
+            const btn = document.getElementById('freeze-btn');
+            const label = document.getElementById('freeze-label');
+            const banner = document.getElementById('frozen-banner');
+
+            if (state.isFrozen) {
+                if (btn) {
+                    btn.classList.remove('bg-slate-100', 'text-slate-700');
+                    btn.classList.add('bg-amber-500', 'text-white');
+                }
+                if (label) label.textContent = 'Sblocca';
+                if (state.role === 'student') banner.classList.remove('hidden');
+            } else {
+                if (btn) {
+                    btn.classList.remove('bg-amber-500', 'text-white');
+                    btn.classList.add('bg-slate-100', 'text-slate-700');
+                }
+                if (label) label.textContent = 'Blocca';
+                banner.classList.add('hidden');
+            }
+        }
+
+        // ---------------- TIMER CLASSE ----------------
+        function startClassTimer(seconds) {
+            if (state.role !== 'teacher') return;
+            clearInterval(timerInterval);
+            state.timerSeconds = seconds;
+            state.timerRunning = true;
+            updateTimerDisplay();
+            broadcastState();
+
+            timerInterval = setInterval(() => {
+                if (state.timerSeconds > 0) {
+                    state.timerSeconds--;
+                    updateTimerDisplay();
+                    if (state.timerSeconds % 5 === 0 || state.timerSeconds <= 10) {
+                        broadcastState();
+                    }
+                } else {
+                    clearInterval(timerInterval);
+                    state.timerRunning = false;
+                    broadcastState();
+                    showToast('⏰ Tempo scaduto!', 'info');
+                }
+            }, 1000);
+        }
+
+        function stopClassTimer() {
+            if (state.role !== 'teacher') return;
+            clearInterval(timerInterval);
+            state.timerSeconds = 0;
+            state.timerRunning = false;
+            updateTimerDisplay();
+            broadcastState();
+        }
+
+        function updateTimerDisplay() {
+            const pill = document.getElementById('timer-pill');
+            const text = document.getElementById('timer-display');
+            if (!state.timerRunning && state.timerSeconds <= 0) {
+                pill.classList.add('hidden');
+                return;
+            }
+            pill.classList.remove('hidden');
+            const mins = Math.floor(state.timerSeconds / 60).toString().padStart(2, '0');
+            const secs = (state.timerSeconds % 60).toString().padStart(2, '0');
+            text.textContent = `${mins}:${secs}`;
+        }
+
+        // ---------------- ZOOM, PULIZIA ED ESPORTAZIONE ----------------
+        function setZoom(newZoom) {
+            state.zoom = Math.max(0.35, Math.min(2.0, Math.round(newZoom * 100) / 100));
+            const canvas = document.getElementById('board-canvas');
+            const sizer = document.getElementById('board-zoom-sizer');
+            canvas.style.transform = `scale(${state.zoom})`;
+            if (sizer) {
+                sizer.style.width = `${Math.round(3000 * state.zoom)}px`;
+                sizer.style.height = `${Math.round(2000 * state.zoom)}px`;
+            }
+            document.getElementById('zoom-level').textContent = `${Math.round(state.zoom * 100)}%`;
+        }
+
+        function adjustZoom(delta) {
+            setZoom(state.zoom + delta);
+        }
+
+        function fitBoardToScreen() {
+            const viewport = document.getElementById('board-viewport');
+            if (!viewport) return;
+            const scaleX = viewport.clientWidth / 3000;
+            const scaleY = viewport.clientHeight / 2000;
+            const fitScale = Math.max(0.35, Math.min(1, Math.min(scaleX, scaleY)));
+            setZoom(fitScale);
+            viewport.scrollTo({ left: 0, top: 0, behavior: 'smooth' });
+        }
+
+        function initZoomGestures() {
+            const viewport = document.getElementById('board-viewport');
+            if (!viewport) return;
+
+            // Zoom con Ctrl + rotellina del mouse
+            viewport.addEventListener('wheel', (e) => {
+                if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                    const step = e.deltaY < 0 ? 0.08 : -0.08;
+                    setZoom(state.zoom + step);
+                }
+            }, { passive: false });
+
+            // Pinch-to-zoom a due dita su touchscreen / LIM
+            let initialPinchDist = null;
+            let initialPinchZoom = 1;
+
+            viewport.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 2) {
+                    initialPinchDist = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                    initialPinchZoom = state.zoom;
+                }
+            }, { passive: true });
+
+            viewport.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 2 && initialPinchDist) {
+                    e.preventDefault();
+                    const currentDist = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                    setZoom(initialPinchZoom * (currentDist / initialPinchDist));
+                }
+            }, { passive: false });
+
+            viewport.addEventListener('touchend', () => {
+                initialPinchDist = null;
+            });
+        }
+
+        function resetBoardItems() {
+            if (state.role !== 'teacher') return;
+            state.items = [];
+            state.vectors = [];
+            renderAllItems();
+            renderAllVectors();
+            broadcastState();
+            showToast('Lavagna completamente svuotata.', 'info');
+        }
+
+        function saveLessonFile() {
+            const lessonData = {
+                app: 'Lavagna-CPIA',
+                version: 1,
+                savedAt: new Date().toISOString(),
+                template: state.template,
+                sectionTitles: state.sectionTitles,
+                sectionColors: state.sectionColors,
+                teamCount: state.teamCount,
+                items: state.items,
+                vectors: state.vectors
+            };
+
+            const jsonStr = JSON.stringify(lessonData, null, 2);
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const dateStr = new Date().toISOString().slice(0, 10);
+            a.href = url;
+            a.download = `lezione-lavagna-${dateStr}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('File della lezione salvato sul PC!', 'success');
+        }
+
+        function loadLessonFile(event) {
+            if (state.role !== 'teacher') return;
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (!data || data.app !== 'Lavagna-CPIA') {
+                        showToast('File non valido: scegli un file .json salvato dalla lavagna.', 'error');
+                        return;
+                    }
+
+                    state.template = data.template || 'blank';
+                    state.sectionTitles = { ...state.sectionTitles, ...(data.sectionTitles || {}) };
+                    state.sectionColors = { ...DEFAULT_SECTION_COLORS, ...(data.sectionColors || {}) };
+                    state.teamCount = data.teamCount || 0;
+                    state.items = Array.isArray(data.items) ? data.items : [];
+                    state.vectors = Array.isArray(data.vectors) ? data.vectors : [];
+
+                    applyTemplateUI();
+                    renderAllItems();
+                    renderAllVectors();
+                    broadcastState();
+                    showToast('Lezione caricata e sincronizzata con la classe!', 'success');
+                } catch (err) {
+                    showToast('Errore nella lettura del file lezione.', 'error');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        function exportBoardImage() {
+            const exportCanvas = document.createElement('canvas');
+            exportCanvas.width = 1800;
+            exportCanvas.height = 1100;
+            const ctx = exportCanvas.getContext('2d');
+
+            ctx.fillStyle = '#f8fafc';
+            ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+
+            ctx.fillStyle = '#1e293b';
+            ctx.font = 'bold 28px Inter, sans-serif';
+            ctx.fillText(`Lavagna Collaborativa CPIA • Stanza ${state.roomCode}`, 48, 56);
+
+            const hexMap = { yellow: '#fef08a', blue: '#bae6fd', pink: '#fecdd3', green: '#bbf7d0', purple: '#e9d5ff' };
+            state.items.forEach(item => {
+                if (item.type === 'note') {
+                    ctx.fillStyle = hexMap[item.color] || '#fef08a';
+                    ctx.beginPath();
+                    ctx.roundRect(item.x, item.y, 230, 155, 16);
+                    ctx.fill();
+                    ctx.strokeStyle = '#cbd5e1';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#0f172a';
+                    ctx.font = 'bold 14px Inter, sans-serif';
+                    ctx.fillText(item.author, item.x + 14, item.y + 26);
+
+                    ctx.font = '15px Inter, sans-serif';
+                    const words = item.text.split(' ');
+                    let line = '';
+                    let lineY = item.y + 52;
+                    words.forEach(w => {
+                        if ((line + w).length > 26) {
+                            ctx.fillText(line, item.x + 14, lineY);
+                            line = w + ' ';
+                            lineY += 20;
+                        } else {
+                            line += w + ' ';
+                        }
+                    });
+                    ctx.fillText(line, item.x + 14, lineY);
+                } else if (item.type === 'stamp') {
+                    ctx.font = '44px serif';
+                    ctx.fillText(item.text, item.x, item.y + 40);
+                }
+            });
+
+            const link = document.createElement('a');
+            link.download = `lavagna-${state.roomCode.toLowerCase()}.png`;
+            link.href = exportCanvas.toDataURL('image/png');
+            link.click();
+            showToast('Immagine della lavagna scaricata!', 'success');
+        }
+
+        // ---------------- UTILITÀ ----------------
+        function updateBoardEmptyState() {
+            const hint = document.getElementById('empty-board-hint');
+            if (state.items.length > 0 || state.vectors.length > 0 || state.template !== 'blank') {
+                hint.classList.add('hidden');
+            } else {
+                hint.classList.remove('hidden');
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            const box = document.getElementById('toast-box');
+            const toast = document.createElement('div');
+            const colors = {
+                info: 'bg-slate-800 text-white',
+                success: 'bg-emerald-600 text-white',
+                error: 'bg-rose-600 text-white'
+            };
+            toast.className = `${colors[type] || colors.info} px-4 py-2.5 rounded-2xl shadow-lg text-xs sm:text-sm font-bold transition-all duration-300`;
+            toast.textContent = message;
+            box.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function escapeHtml(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        // ---------------- INIZIALIZZAZIONE ----------------
+        window.onload = function () {
+            initCanvasInteractions();
+            initZoomGestures();
+            lucide.createIcons();
+        };
+    </script>
+</body>
+</html>
