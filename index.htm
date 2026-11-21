@@ -1701,9 +1701,11 @@
                 return { x: Math.round(x), y: Math.round(y) };
             }
             const step = compassState.radiusSnapStep;
+            // I puntini del radial-gradient 28x28 sono centrati a (14, 14) + k*28
+            const offset = step === 28 ? 14 : 0;
             return {
-                x: Math.round(x / step) * step,
-                y: Math.round(y / step) * step
+                x: Math.round((x - offset) / step) * step + offset,
+                y: Math.round((y - offset) / step) * step + offset
             };
         }
 
