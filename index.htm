@@ -803,62 +803,6 @@
             timerRunning: false
         };
 
-        function getActiveBoardKey() {
-            if (state.teamCount > 0 && state.groupSpaceMode === 'separate') {
-                if (state.role === 'teacher') {
-                    return state.teacherBoardView || 'main';
-                }
-                if (state.myGroup && state.myGroup >= 1 && state.myGroup <= 4) {
-                    return 'g' + state.myGroup;
-                }
-            }
-            return 'main';
-        }
-
-        function getActiveBoardStore() {
-            const key = getActiveBoardKey();
-            if (key === 'main') {
-                return { items: state.items, vectors: state.vectors };
-            }
-            if (!state.groupBoards[key]) {
-                state.groupBoards[key] = { items: [], vectors: [] };
-            }
-            return state.groupBoards[key];
-        }
-
-        function getBoardStoreByKey(key) {
-            if (!key || key === 'main') {
-                return { items: state.items, vectors: state.vectors };
-            }
-            if (!state.groupBoards[key]) {
-                state.groupBoards[key] = { items: [], vectors: [] };
-            }
-            return state.groupBoards[key];
-        }
-
-        const DEFAULT_SECTION_COLORS = {
-            col1: 'emerald', col2: 'amber', col3: 'rose',
-            q1: 'amber', q2: 'sky', q3: 'rose', q4: 'emerald',
-            t1: 'indigo', t2: 'indigo', t3: 'indigo', t4: 'indigo',
-            center: 'indigo',
-            pro: 'emerald', con: 'rose'
-        };
-
-        const SECTION_COLOR_THEMES = {
-            emerald: { bg: 'bg-emerald-50/80', border: 'border-emerald-300', header: 'bg-emerald-100 text-emerald-900' },
-            lime:    { bg: 'bg-lime-50/80',    border: 'border-lime-300',    header: 'bg-lime-100 text-lime-900' },
-            teal:    { bg: 'bg-teal-50/80',    border: 'border-teal-300',    header: 'bg-teal-100 text-teal-900' },
-            cyan:    { bg: 'bg-cyan-50/80',    border: 'border-cyan-300',    header: 'bg-cyan-100 text-cyan-900' },
-            sky:     { bg: 'bg-sky-50/80',     border: 'border-sky-300',     header: 'bg-sky-100 text-sky-900' },
-            indigo:  { bg: 'bg-indigo-50/80',  border: 'border-indigo-300',  header: 'bg-indigo-100 text-indigo-900' },
-            purple:  { bg: 'bg-purple-50/80',  border: 'border-purple-300',  header: 'bg-purple-100 text-purple-900' },
-            pink:    { bg: 'bg-pink-50/80',    border: 'border-pink-300',    header: 'bg-pink-100 text-pink-900' },
-            rose:    { bg: 'bg-rose-50/80',    border: 'border-rose-300',    header: 'bg-rose-100 text-rose-900' },
-            orange:  { bg: 'bg-orange-50/80',  border: 'border-orange-300',  header: 'bg-orange-100 text-orange-900' },
-            amber:   { bg: 'bg-amber-50/80',   border: 'border-amber-300',   header: 'bg-amber-100 text-amber-900' },
-            slate:   { bg: 'bg-slate-50/80',   border: 'border-slate-300',   header: 'bg-slate-200 text-slate-900' }
-        };
-
         const NOTE_STYLES = {
             yellow: { bg: 'bg-amber-100', border: 'border-amber-300', text: 'text-amber-950', badge: 'bg-amber-500' },
             blue:   { bg: 'bg-sky-100',   border: 'border-sky-300',   text: 'text-sky-950',   badge: 'bg-sky-500' },
@@ -880,370 +824,64 @@
 
         const CURSOR_COLORS = [
             { hex: '#e11d48', bg: 'bg-rose-600' },
-            { hex: '#0284c7', bg: 'bg-sky-600' },
+            { hex: '#2563eb', bg: 'bg-blue-600' },
             { hex: '#059669', bg: 'bg-emerald-600' },
             { hex: '#d97706', bg: 'bg-amber-600' },
             { hex: '#7c3aed', bg: 'bg-violet-600' },
-            { hex: '#db2777', bg: 'bg-pink-600' },
-            { hex: '#0d9488', bg: 'bg-teal-600' }
+            { hex: '#0891b2', bg: 'bg-cyan-600' }
         ];
+
+        const DEFAULT_SECTION_COLORS = {
+            col1: 'emerald', col2: 'amber', col3: 'rose',
+            q1: 'amber', q2: 'sky', q3: 'rose', q4: 'emerald',
+            t1: 'indigo', t2: 'indigo', t3: 'indigo', t4: 'indigo',
+            center: 'indigo',
+            pro: 'emerald', con: 'rose'
+        };
+
+        const SECTION_COLOR_THEMES = {
+            emerald: { bg: 'bg-emerald-50/75', border: 'border-emerald-300', header: 'bg-emerald-100 text-emerald-900 border border-emerald-300' },
+            lime:    { bg: 'bg-lime-50/75',    border: 'border-lime-300',    header: 'bg-lime-100 text-lime-900 border border-lime-300' },
+            teal:    { bg: 'bg-teal-50/75',    border: 'border-teal-300',    header: 'bg-teal-100 text-teal-900 border border-teal-300' },
+            cyan:    { bg: 'bg-cyan-50/75',    border: 'border-cyan-300',    header: 'bg-cyan-100 text-cyan-900 border border-cyan-300' },
+            sky:     { bg: 'bg-sky-50/75',     border: 'border-sky-300',     header: 'bg-sky-100 text-sky-900 border border-sky-300' },
+            indigo:  { bg: 'bg-indigo-50/75',  border: 'border-indigo-300',  header: 'bg-indigo-100 text-indigo-900 border border-indigo-300' },
+            purple:  { bg: 'bg-purple-50/75',  border: 'border-purple-300',  header: 'bg-purple-100 text-purple-900 border border-purple-300' },
+            pink:    { bg: 'bg-pink-50/75',    border: 'border-pink-300',    header: 'bg-pink-100 text-pink-900 border border-pink-300' },
+            rose:    { bg: 'bg-rose-50/75',    border: 'border-rose-300',    header: 'bg-rose-100 text-rose-900 border border-rose-300' },
+            orange:  { bg: 'bg-orange-50/75',  border: 'border-orange-300',  header: 'bg-orange-100 text-orange-900 border border-orange-300' },
+            amber:   { bg: 'bg-amber-50/75',   border: 'border-amber-300',   header: 'bg-amber-100 text-amber-900 border border-amber-300' },
+            slate:   { bg: 'bg-slate-100/75',  border: 'border-slate-300',   header: 'bg-slate-200 text-slate-900 border border-slate-300' }
+        };
 
         let peer = null;
         let hostConnection = null;
-        let studentConnections = {};
-        let connectedStudents = {};
-        let bannedDevices = {}; // deviceId -> ultimo nome usato
+        const studentConnections = {};
+        const connectedStudents = {};
+        const bannedDevices = {};
+        let timerInterval = null;
         let editingNoteId = null;
         let editingSectionKey = null;
         let selectedSectionColor = 'slate';
-        let timerInterval = null;
         let isDrawingVector = false;
+        let currentVector = null;
         let isErasing = false;
         let isPanning = false;
         let panStartClient = { x: 0, y: 0 };
         let panStartScroll = { left: 0, top: 0 };
         let pendingTextCoords = { x: 200, y: 200 };
         let lastLaserSentAt = 0;
-        let currentVector = null;
         let lastCursorSentAt = 0;
 
-        // Controllo parametri URL (?room=CPIA-123 oppure ?docente=CHIAVE)
-        window.addEventListener('DOMContentLoaded', () => {
-            const params = new URLSearchParams(window.location.search);
-            const roomParam = params.get('room');
-            const teacherParam = params.get('docente');
-            const roleGrid = document.getElementById('role-selector-grid');
-            const btnTeacher = document.getElementById('btn-role-teacher');
-
-            if (teacherParam && teacherParam.trim().length >= 4) {
-                hasTeacherUrlKey = true;
-                btnTeacher.classList.remove('hidden');
-                btnTeacher.classList.add('flex');
-                selectRole('teacher');
-            } else {
-                // Senza il parametro ?docente=... nell'URL, gli studenti vedono SOLO l'accesso Studente
-                roleGrid.classList.remove('grid-cols-2');
-                roleGrid.classList.add('grid-cols-1');
-                selectRole('student');
+        function getBoardStoreByKey(key) {
+            if (key && key !== 'main' && state.groupBoards[key]) {
+                return state.groupBoards[key];
             }
-
-            if (roomParam) {
-                selectRole('student');
-                document.getElementById('input-room-code').value = roomParam.toUpperCase();
-            }
-
-            checkSavedSession();
-            lucide.createIcons();
-        });
-
-        function selectRole(role) {
-            state.role = role;
-            const btnStudent = document.getElementById('btn-role-student');
-            const btnTeacher = document.getElementById('btn-role-teacher');
-            const studentField = document.getElementById('student-room-field');
-            const teacherField = document.getElementById('teacher-pin-field');
-
-            if (role === 'teacher') {
-                btnTeacher.classList.remove('border-slate-200', 'text-slate-600');
-                btnTeacher.classList.add('border-indigo-600', 'bg-indigo-50', 'text-indigo-700');
-                btnStudent.classList.remove('border-indigo-600', 'bg-indigo-50', 'text-indigo-700');
-                btnStudent.classList.add('border-slate-200', 'text-slate-600');
-                studentField.classList.add('hidden');
-                if (!hasTeacherUrlKey) {
-                    teacherField.classList.remove('hidden');
-                } else {
-                    teacherField.classList.add('hidden');
-                }
-            } else {
-                btnStudent.classList.remove('border-slate-200', 'text-slate-600');
-                btnStudent.classList.add('border-indigo-600', 'bg-indigo-50', 'text-indigo-700');
-                btnTeacher.classList.remove('border-indigo-600', 'bg-indigo-50', 'text-indigo-700');
-                btnTeacher.classList.add('border-slate-200', 'text-slate-600');
-                studentField.classList.remove('hidden');
-                teacherField.classList.add('hidden');
-            }
+            return state;
         }
 
-        async function sha256Hex(message) {
-            const msgBuffer = new TextEncoder().encode(message);
-            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        }
-
-        const SESSION_STORAGE_KEY = 'cpia_lavagna_saved_session';
-
-        function persistSessionSnapshot() {
-            if (!state.roomCode || !state.userName) return;
-            try {
-                const snapshot = {
-                    role: state.role,
-                    userName: state.userName,
-                    roomCode: state.roomCode,
-                    savedAt: Date.now(),
-                    items: state.role === 'teacher' ? state.items : [],
-                    vectors: state.role === 'teacher' ? state.vectors : [],
-                    groupBoards: state.role === 'teacher' ? state.groupBoards : null,
-                    template: state.template,
-                    sectionTitles: state.sectionTitles,
-                    sectionColors: state.sectionColors
-                };
-                localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(snapshot));
-            } catch (_) {}
-        }
-
-        function checkSavedSession() {
-            try {
-                const raw = localStorage.getItem(SESSION_STORAGE_KEY);
-                if (!raw) return;
-                const saved = JSON.parse(raw);
-                // Valida solo nelle ultime 6 ore
-                if (!saved || !saved.roomCode || (Date.now() - (saved.savedAt || 0)) > 6 * 3600 * 1000) return;
-
-                const box = document.getElementById('resume-session-box');
-                const info = document.getElementById('resume-session-info');
-                if (box && info) {
-                    const roleTxt = saved.role === 'teacher' ? 'Docente (LIM)' : 'Studente';
-                    info.textContent = `${roleTxt} • ${saved.userName} • Stanza ${saved.roomCode}`;
-                    box.classList.remove('hidden');
-                }
-            } catch (_) {}
-        }
-
-        function resumeSavedSession() {
-            try {
-                const raw = localStorage.getItem(SESSION_STORAGE_KEY);
-                if (!raw) return;
-                const saved = JSON.parse(raw);
-                if (!saved || !saved.roomCode) return;
-
-                state.role = saved.role || 'student';
-                state.userName = saved.userName || 'Utente';
-                state.roomCode = saved.roomCode;
-
-                document.getElementById('input-user-name').value = state.userName;
-                if (state.role === 'teacher') {
-                    if (Array.isArray(saved.items)) state.items = saved.items;
-                    if (Array.isArray(saved.vectors)) state.vectors = saved.vectors;
-                    if (saved.groupBoards) state.groupBoards = saved.groupBoards;
-                    if (saved.template) state.template = saved.template;
-                    if (saved.sectionTitles) state.sectionTitles = saved.sectionTitles;
-                    if (saved.sectionColors) state.sectionColors = saved.sectionColors;
-                    setupTeacherUI();
-                    applyTemplateUI();
-                    renderAllItems();
-                    renderAllVectors();
-                    initPeerHost();
-                } else {
-                    document.getElementById('input-room-code').value = state.roomCode;
-                    setupStudentUI();
-                    initPeerStudent();
-                }
-
-                document.getElementById('header-room-code').textContent = state.roomCode;
-                document.getElementById('setup-modal').classList.add('hidden');
-                lucide.createIcons();
-                showToast(`Rientrato nella stanza ${state.roomCode}!`, 'success');
-            } catch (_) {
-                showToast('Impossibile ripristinare la sessione precedente.', 'error');
-            }
-        }
-
-        function generateRoomCode() {
-            const num = Math.floor(100 + Math.random() * 900);
-            return `CPIA-${num}`;
-        }
-
-        async function enterBoard() {
-            const nameInput = document.getElementById('input-user-name').value.trim();
-            if (!nameInput) {
-                showToast('Inserisci il tuo nome prima di entrare!', 'error');
-                return;
-            }
-            state.userName = nameInput;
-
-            if (state.role === 'teacher') {
-                if (!hasTeacherUrlKey) {
-                    if (Date.now() < pinLockedUntil) {
-                        const secLeft = Math.ceil((pinLockedUntil - Date.now()) / 1000);
-                        showToast(`Troppi tentativi errati. Riprova tra ${secLeft}s.`, 'error');
-                        return;
-                    }
-                    const pinInput = document.getElementById('input-teacher-pin').value.trim();
-                    const inputHash = await sha256Hex(pinInput);
-                    if (inputHash !== TEACHER_PIN_HASH) {
-                        pinAttempts++;
-                        if (pinAttempts >= 3) {
-                            pinLockedUntil = Date.now() + 60000;
-                            pinAttempts = 0;
-                            showToast('Accesso docente bloccato per 60 secondi.', 'error');
-                        } else {
-                            showToast('PIN Docente errato!', 'error');
-                        }
-                        return;
-                    }
-                }
-                state.roomCode = generateRoomCode();
-                setupTeacherUI();
-                initPeerHost();
-            } else {
-                const codeInput = document.getElementById('input-room-code').value.trim().toUpperCase();
-                if (!codeInput) {
-                    showToast('Inserisci il codice della stanza mostrato sulla LIM!', 'error');
-                    return;
-                }
-                state.roomCode = codeInput;
-                setupStudentUI();
-                initPeerStudent();
-            }
-
-            document.getElementById('header-room-code').textContent = state.roomCode;
-            document.getElementById('setup-modal').classList.add('hidden');
-            persistSessionSnapshot();
-            lucide.createIcons();
-        }
-
-        function setupTeacherUI() {
-            document.getElementById('role-badge').textContent = 'Docente (LIM)';
-            document.getElementById('btn-open-teacher-panel').classList.remove('hidden');
-            document.getElementById('btn-open-teacher-panel').classList.add('flex');
-            document.getElementById('freeze-btn').classList.remove('hidden');
-            document.getElementById('freeze-btn').classList.add('flex');
-            const laserBtn = document.getElementById('btn-tool-laser');
-            if (laserBtn) {
-                laserBtn.classList.remove('hidden');
-                laserBtn.classList.add('flex');
-            }
-        }
-
-        function setupStudentUI() {
-            document.getElementById('role-badge').textContent = 'Studente';
-            document.getElementById('btn-open-teacher-panel').classList.add('hidden');
-            document.getElementById('btn-open-teacher-panel').classList.remove('flex');
-            document.getElementById('freeze-btn').classList.add('hidden');
-            document.getElementById('freeze-btn').classList.remove('flex');
-            const laserBtn = document.getElementById('btn-tool-laser');
-            if (laserBtn) {
-                laserBtn.classList.add('hidden');
-                laserBtn.classList.remove('flex');
-            }
-        }
-
-        function setConnectionStatus(status, text) {
-            const dot = document.getElementById('connection-dot');
-            const label = document.getElementById('connection-status');
-            const reconnectBtn = document.getElementById('btn-reconnect');
-            if (label) label.textContent = text;
-            if (!dot) return;
-            if (status === 'online') {
-                dot.className = 'w-2 h-2 rounded-full bg-emerald-500';
-                if (reconnectBtn) reconnectBtn.classList.add('hidden');
-            } else if (status === 'connecting') {
-                dot.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
-                if (reconnectBtn) reconnectBtn.classList.add('hidden');
-            } else {
-                dot.className = 'w-2 h-2 rounded-full bg-rose-500';
-                if (reconnectBtn) reconnectBtn.classList.remove('hidden');
-            }
-        }
-
-        function reconnectBoard() {
-            if (!state.roomCode) return;
-            try {
-                if (hostConnection) hostConnection.close();
-                if (peer) peer.destroy();
-            } catch (_) {}
-            if (state.role === 'teacher') {
-                initPeerHost();
-            } else {
-                initPeerStudent();
-            }
-        }
-
-        function getPeerIdFromRoom(roomCode) {
-            return 'cpia-lavagna-' + String(roomCode || '').trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
-        }
-
-        function initPeerHost() {
-            setConnectionStatus('connecting', 'Creazione stanza...');
-            const hostId = getPeerIdFromRoom(state.roomCode);
-
-            try {
-                peer = new Peer(hostId);
-                peer.on('open', () => {
-                    setConnectionStatus('online', 'Stanza attiva • Pronta per la classe');
-                    openRoomModal();
-                });
-
-                peer.on('connection', (conn) => {
-                    conn.on('open', () => {
-                        studentConnections[conn.peer] = conn;
-                        conn.send({ type: 'SYNC_STATE', payload: getSyncPayload() });
-                    });
-
-                    conn.on('data', (data) => {
-                        handleMessageFromStudent(conn, data);
-                    });
-
-                    conn.on('close', () => {
-                        delete studentConnections[conn.peer];
-                        const uid = Object.keys(connectedStudents).find(k => connectedStudents[k].peerId === conn.peer);
-                        if (uid) {
-                            delete connectedStudents[uid];
-                            removeRemoteCursor(uid);
-                            updateParticipantsUI();
-                            broadcastState();
-                        }
-                    });
-                });
-
-                peer.on('error', (err) => {
-                    if (err && err.type === 'unavailable-id') {
-                        setConnectionStatus('offline', 'Codice stanza occupato • Riprova tra qualche secondo');
-                        showToast('La stanza precedente si sta chiudendo: clicca su "Riconnetti" tra 3 secondi.', 'info');
-                    } else {
-                        setConnectionStatus('online', 'Modalità lavagna locale attiva');
-                    }
-                });
-            } catch (e) {
-                setConnectionStatus('online', 'Modalità lavagna locale attiva');
-            }
-        }
-
-        function initPeerStudent() {
-            setConnectionStatus('connecting', 'Connessione alla LIM...');
-            const hostId = getPeerIdFromRoom(state.roomCode);
-
-            try {
-                peer = new Peer();
-                peer.on('open', () => {
-                    hostConnection = peer.connect(hostId, { reliable: true });
-
-                    hostConnection.on('open', () => {
-                        setConnectionStatus('online', 'Connesso alla lavagna di classe');
-                        hostConnection.send({
-                            type: 'JOIN',
-                            payload: { userId: state.userId, deviceId: state.deviceId, name: state.userName }
-                        });
-                    });
-
-                    hostConnection.on('data', (data) => {
-                        handleMessageFromHost(data);
-                    });
-
-                    hostConnection.on('close', () => {
-                        setConnectionStatus('offline', 'Disconnesso dalla LIM');
-                        showToast('Connessione interrotta. Premi "Riconnetti" in alto.', 'error');
-                    });
-                });
-
-                peer.on('error', () => {
-                    setConnectionStatus('offline', 'Stanza non trovata');
-                    showToast('Stanza non trovata. Verifica il codice sulla LIM o premi "Riconnetti".', 'error');
-                });
-            } catch (e) {
-                setConnectionStatus('offline', 'Errore di rete');
-            }
+        function getActiveBoardStore() {
+            return getBoardStoreByKey(getActiveBoardKey());
         }
 
         function getSyncPayload() {
@@ -1257,9 +895,343 @@
                 isFrozen: state.isFrozen,
                 teamCount: state.teamCount,
                 groupSpaceMode: state.groupSpaceMode,
-                students: connectedStudents,
                 timerSeconds: state.timerSeconds,
-                timerRunning: state.timerRunning
+                timerRunning: state.timerRunning,
+                students: connectedStudents
+            };
+        }
+
+        function persistSessionSnapshot() {
+            try {
+                if (!state.roomCode) return;
+                localStorage.setItem('cpia_lavagna_last_session', JSON.stringify({
+                    role: state.role,
+                    userName: state.userName,
+                    roomCode: state.roomCode,
+                    items: state.items,
+                    vectors: state.vectors,
+                    groupBoards: state.groupBoards,
+                    template: state.template,
+                    sectionTitles: state.sectionTitles,
+                    sectionColors: state.sectionColors,
+                    teamCount: state.teamCount,
+                    groupSpaceMode: state.groupSpaceMode,
+                    savedAt: Date.now()
+                }));
+            } catch (_) {}
+        }
+
+        function checkSavedSessionOnBoot() {
+            try {
+                const raw = localStorage.getItem('cpia_lavagna_last_session');
+                if (!raw) return;
+                const saved = JSON.parse(raw);
+                if (!saved || !saved.roomCode) return;
+                const box = document.getElementById('resume-session-box');
+                const info = document.getElementById('resume-session-info');
+                if (box && info) {
+                    info.textContent = `Stanza ${saved.roomCode} (${saved.role === 'teacher' ? 'Docente' : 'Studente'}: ${saved.userName || 'Utente'})`;
+                    box.classList.remove('hidden');
+                }
+            } catch (_) {}
+        }
+
+        function resumeSavedSession() {
+            try {
+                const raw = localStorage.getItem('cpia_lavagna_last_session');
+                if (!raw) return;
+                const saved = JSON.parse(raw);
+                if (!saved || !saved.roomCode) return;
+                state.role = saved.role || 'student';
+                state.userName = saved.userName || 'Utente';
+                state.roomCode = saved.roomCode;
+                if (saved.role === 'teacher') {
+                    state.items = saved.items || [];
+                    state.vectors = saved.vectors || [];
+                    if (saved.groupBoards) state.groupBoards = saved.groupBoards;
+                    state.template = saved.template || 'blank';
+                    if (saved.sectionTitles) state.sectionTitles = saved.sectionTitles;
+                    if (saved.sectionColors) state.sectionColors = saved.sectionColors;
+                    state.teamCount = saved.teamCount || 0;
+                    state.groupSpaceMode = saved.groupSpaceMode || 'shared';
+                }
+                document.getElementById('setup-modal').classList.add('hidden');
+                startBoardSession();
+            } catch (_) {
+                showToast('Impossibile ripristinare la sessione.', 'error');
+            }
+        }
+
+        async function sha256Hex(text) {
+            try {
+                const data = new TextEncoder().encode(text);
+                const hashBuf = await crypto.subtle.digest('SHA-256', data);
+                return Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
+            } catch (_) {
+                return '';
+            }
+        }
+
+        function selectRole(role) {
+            state.role = role;
+            const btnStudent = document.getElementById('btn-role-student');
+            const btnTeacher = document.getElementById('btn-role-teacher');
+            const studentField = document.getElementById('student-room-field');
+            const teacherField = document.getElementById('teacher-pin-field');
+
+            if (role === 'teacher') {
+                btnTeacher.classList.remove('hidden');
+                btnTeacher.classList.add('flex', 'border-indigo-600', 'bg-indigo-50', 'text-indigo-700');
+                btnTeacher.classList.remove('border-slate-200', 'text-slate-600');
+                btnStudent.classList.remove('border-indigo-600', 'bg-indigo-50', 'text-indigo-700');
+                btnStudent.classList.add('border-slate-200', 'text-slate-600');
+                studentField.classList.add('hidden');
+                teacherField.classList.remove('hidden');
+            } else {
+                btnStudent.classList.add('border-indigo-600', 'bg-indigo-50', 'text-indigo-700');
+                btnStudent.classList.remove('border-slate-200', 'text-slate-600');
+                btnTeacher.classList.remove('border-indigo-600', 'bg-indigo-50', 'text-indigo-700');
+                btnTeacher.classList.add('border-slate-200', 'text-slate-600');
+                studentField.classList.remove('hidden');
+                teacherField.classList.add('hidden');
+            }
+        }
+
+        async function enterBoard() {
+            const nameInput = document.getElementById('input-user-name').value.trim();
+            if (!nameInput) {
+                showToast('Inserisci il tuo nome prima di entrare.', 'error');
+                return;
+            }
+            state.userName = nameInput;
+
+            if (state.role === 'teacher') {
+                if (Date.now() < pinLockedUntil) {
+                    showToast('Troppi tentativi errati. Attendi qualche secondo.', 'error');
+                    return;
+                }
+                const pin = document.getElementById('input-teacher-pin').value.trim();
+                const hashed = await sha256Hex(pin);
+                if (!hasTeacherUrlKey && hashed !== TEACHER_PIN_HASH) {
+                    pinAttempts++;
+                    if (pinAttempts >= 4) {
+                        pinLockedUntil = Date.now() + 15000;
+                        pinAttempts = 0;
+                    }
+                    showToast('PIN Docente non valido.', 'error');
+                    return;
+                }
+                if (!state.roomCode) {
+                    state.roomCode = 'CPIA-' + Math.floor(100 + Math.random() * 900);
+                }
+            } else {
+                const code = document.getElementById('input-room-code').value.trim().toUpperCase();
+                if (!code) {
+                    showToast('Inserisci il codice della stanza mostrato sulla LIM.', 'error');
+                    return;
+                }
+                state.roomCode = code;
+            }
+
+            document.getElementById('setup-modal').classList.add('hidden');
+            startBoardSession();
+        }
+
+        function startBoardSession() {
+            document.getElementById('header-room-code').textContent = state.roomCode;
+            const roleBadge = document.getElementById('role-badge');
+            if (state.role === 'teacher') {
+                roleBadge.textContent = 'Docente';
+                roleBadge.className = 'px-2 py-0.5 text-[11px] font-bold rounded-full bg-indigo-100 text-indigo-700 shrink-0';
+                document.getElementById('btn-open-teacher-panel').classList.remove('hidden');
+                document.getElementById('btn-open-teacher-panel').classList.add('flex');
+                document.getElementById('freeze-btn').classList.remove('hidden');
+                document.getElementById('freeze-btn').classList.add('flex');
+                const laserBtn = document.getElementById('btn-tool-laser');
+                if (laserBtn) {
+                    laserBtn.classList.remove('hidden');
+                    laserBtn.classList.add('flex');
+                }
+                applyTemplateUI();
+                updateGroupModeUI();
+                renderAllItems();
+                renderAllVectors();
+                initPeerHost();
+            } else {
+                roleBadge.textContent = 'Studente';
+                roleBadge.className = 'px-2 py-0.5 text-[11px] font-bold rounded-full bg-emerald-100 text-emerald-700 shrink-0';
+                initPeerStudent();
+            }
+            persistSessionSnapshot();
+        }
+
+        function getPeerIdFromRoom(code) {
+            return 'cpia-lavagna-' + String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+        }
+
+        function setConnectionStatus(status, label) {
+            const dot = document.getElementById('connection-dot');
+            const text = document.getElementById('connection-status');
+            const btn = document.getElementById('btn-reconnect');
+            if (text) text.textContent = label;
+            if (dot) {
+                dot.className = status === 'online'
+                    ? 'w-2 h-2 rounded-full bg-emerald-500'
+                    : status === 'connecting'
+                        ? 'w-2 h-2 rounded-full bg-amber-400 animate-pulse'
+                        : 'w-2 h-2 rounded-full bg-rose-500';
+            }
+            if (btn) {
+                if (status === 'offline') btn.classList.remove('hidden');
+                else btn.classList.add('hidden');
+            }
+        }
+
+        function reconnectBoard() {
+            if (peer) {
+                try { peer.destroy(); } catch (_) {}
+                peer = null;
+            }
+            if (state.role === 'teacher') initPeerHost();
+            else initPeerStudent();
+        }
+
+        function initPeerHost() {
+            setConnectionStatus('connecting', 'Avvio stanza...');
+            peer = new Peer(getPeerIdFromRoom(state.roomCode));
+            peer.on('open', () => {
+                setConnectionStatus('online', 'Stanza attiva • LIM pronta');
+            });
+            peer.on('connection', (conn) => {
+                studentConnections[conn.peer] = conn;
+                conn.on('data', (msg) => handleMessageFromStudent(conn, msg));
+                conn.on('close', () => {
+                    delete studentConnections[conn.peer];
+                    const uid = Object.keys(connectedStudents).find(k => connectedStudents[k].peerId === conn.peer);
+                    if (uid) {
+                        removeRemoteCursor(uid);
+                        delete connectedStudents[uid];
+                        updateParticipantsUI();
+                        broadcastState();
+                    }
+                });
+            });
+            peer.on('error', () => {
+                setConnectionStatus('offline', 'Errore di rete');
+            });
+        }
+
+        function initPeerStudent() {
+            setConnectionStatus('connecting', 'Collegamento alla LIM...');
+            peer = new Peer();
+            peer.on('open', () => {
+                hostConnection = peer.connect(getPeerIdFromRoom(state.roomCode), { reliable: true });
+                hostConnection.on('open', () => {
+                    setConnectionStatus('online', 'Collegato alla classe');
+                    sendToHost({
+                        type: 'JOIN',
+                        payload: {
+                            userId: state.userId,
+                            deviceId: state.deviceId,
+                            name: state.userName
+                        }
+                    });
+                });
+                hostConnection.on('data', (msg) => handleMessageFromHost(msg));
+                hostConnection.on('close', () => {
+                    setConnectionStatus('offline', 'Disconnesso dalla LIM');
+                });
+                hostConnection.on('error', () => {
+                    setConnectionStatus('offline', 'Stanza non trovata');
+                });
+            });
+            peer.on('error', () => {
+                setConnectionStatus('offline', 'Errore connessione');
+            });
+        }
+
+        function handleCreateNote(e) {
+            e.preventDefault();
+            const input = document.getElementById('new-note-input');
+            const text = input ? input.value.trim() : '';
+            if (!text) return;
+            createBoardItem({
+                type: 'note',
+                text: text,
+                color: state.selectedColor
+            });
+            input.value = '';
+        }
+
+        function getActiveBoardKey() {
+            if (state.teamCount > 0 && state.groupSpaceMode === 'separate') {
+                if (state.role === 'teacher') {
+                    return state.teacherBoardView || 'main';
+                }
+                if (state.myGroup && state.myGroup >= 1 && state.myGroup <= 4) {
+                    return 'g' + state.myGroup;
+                }
+            }
+            return 'main';
+        }
+
+        function getGroupZoneBounds(groupNum, totalGroups) {
+            const count = Math.max(2, Math.min(4, totalGroups || 2));
+            const idx = Math.max(0, Math.min(count - 1, (groupNum || 1) - 1));
+            const boardW = 1600;
+            const boardH = 980;
+            const padX = 48;
+            const padTop = 95;
+            const gap = 28;
+            const headerOffset = 68;
+
+            if (count === 2 || count === 3) {
+                const colW = (boardW - padX * 2 - gap * (count - 1)) / count;
+                return {
+                    x: Math.round(padX + idx * (colW + gap)),
+                    y: padTop,
+                    w: Math.round(colW),
+                    h: boardH - padTop - 24,
+                    innerX: Math.round(padX + idx * (colW + gap) + 18),
+                    innerY: padTop + headerOffset,
+                    innerW: Math.max(220, Math.round(colW - 36)),
+                    innerH: Math.max(300, boardH - padTop - headerOffset - 40)
+                };
+            }
+            const cellW = (boardW - padX * 2 - gap) / 2;
+            const cellH = (boardH - padTop - gap - 32) / 2;
+            const col = idx % 2;
+            const row = Math.floor(idx / 2);
+            return {
+                x: Math.round(padX + col * (cellW + gap)),
+                y: Math.round(padTop + row * (cellH + gap)),
+                w: Math.round(cellW),
+                h: Math.round(cellH),
+                innerX: Math.round(padX + col * (cellW + gap) + 18),
+                innerY: Math.round(padTop + row * (cellH + gap) + headerOffset),
+                innerW: Math.max(240, Math.round(cellW - 36)),
+                innerH: Math.max(220, Math.round(cellH - headerOffset - 24))
+            };
+        }
+
+        function clampCoordsToStudentZone(x, y, itemW = 0, itemH = 0) {
+            if (state.role === 'teacher' || state.teamCount <= 0 || !state.myGroup) {
+                return { x, y };
+            }
+            // In "Stanze Separate" usa tutta l'area della propria stanza (0..1600 x 0..980)
+            if (state.groupSpaceMode === 'separate') {
+                return {
+                    x: Math.max(24, Math.min(1600 - Math.max(40, itemW), x)),
+                    y: Math.max(24, Math.min(980 - Math.max(40, itemH), y))
+                };
+            }
+            // In "Lavagna Unica" confina lo studente esclusivamente dentro il riquadro del proprio colore
+            const z = getGroupZoneBounds(state.myGroup, state.teamCount);
+            const maxX = Math.max(z.innerX, z.x + z.w - Math.max(40, itemW) - 12);
+            const maxY = Math.max(z.innerY, z.y + z.h - Math.max(40, itemH) - 12);
+            return {
+                x: Math.max(z.x + 12, Math.min(maxX, x)),
+                y: Math.max(z.innerY, Math.min(maxY, y))
             };
         }
 
@@ -1927,17 +1899,19 @@
                 }
 
                 if (state.activeTool === 'stamp') {
+                    const clamped = clampCoordsToStudentZone(Math.max(10, pt.x - 24), Math.max(10, pt.y - 24), 48, 48);
                     createBoardItem({
                         type: 'stamp',
                         text: state.selectedStamp,
-                        x: Math.max(10, pt.x - 24),
-                        y: Math.max(10, pt.y - 24)
+                        x: clamped.x,
+                        y: clamped.y
                     });
                     return;
                 }
 
                 if (state.activeTool === 'pen' || state.activeTool === 'highlighter' || state.activeTool === 'arrow' || state.activeTool === 'shape') {
                     if (e.cancelable) e.preventDefault();
+                    const clampedStart = clampCoordsToStudentZone(pt.x, pt.y, 10, 10);
                     const isHighlighter = state.activeTool === 'highlighter';
                     isDrawingVector = true;
                     currentVector = {
@@ -1949,9 +1923,9 @@
                         strokeWidth: isHighlighter ? 22 : (state.strokeWidth || 3),
                         authorId: state.userId,
                         lockedByTeacher: state.role === 'teacher',
-                        points: [pt],
-                        x1: pt.x, y1: pt.y,
-                        x2: pt.x, y2: pt.y
+                        points: [clampedStart],
+                        x1: clampedStart.x, y1: clampedStart.y,
+                        x2: clampedStart.x, y2: clampedStart.y
                     };
                     renderVectorPreview();
                 }
@@ -1992,7 +1966,8 @@
 
                 if (!isDrawingVector || !currentVector) return;
                 if (e.cancelable) e.preventDefault();
-                const pt = getCanvasCoords(e);
+                const rawPt = getCanvasCoords(e);
+                const pt = clampCoordsToStudentZone(rawPt.x, rawPt.y, 10, 10);
                 if (currentVector.type === 'pen') {
                     const last = currentVector.points[currentVector.points.length - 1];
                     if (Math.hypot(pt.x - last.x, pt.y - last.y) > 4) {
@@ -2005,13 +1980,23 @@
                         // Aggancia la freccia agli angoli multipli di 45°
                         const angle = Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) * (Math.PI / 4);
                         const len = Math.hypot(dx, dy);
-                        currentVector.x2 = Math.round(currentVector.x1 + Math.cos(angle) * len);
-                        currentVector.y2 = Math.round(currentVector.y1 + Math.sin(angle) * len);
+                        const snapped = clampCoordsToStudentZone(
+                            Math.round(currentVector.x1 + Math.cos(angle) * len),
+                            Math.round(currentVector.y1 + Math.sin(angle) * len),
+                            10, 10
+                        );
+                        currentVector.x2 = snapped.x;
+                        currentVector.y2 = snapped.y;
                     } else {
                         // Mantiene proporzioni 1:1 (quadrato perfetto, cerchio perfetto, ecc.)
                         const side = Math.max(Math.abs(dx), Math.abs(dy));
-                        currentVector.x2 = currentVector.x1 + (dx >= 0 ? side : -side);
-                        currentVector.y2 = currentVector.y1 + (dy >= 0 ? side : -side);
+                        const snapped = clampCoordsToStudentZone(
+                            currentVector.x1 + (dx >= 0 ? side : -side),
+                            currentVector.y1 + (dy >= 0 ? side : -side),
+                            10, 10
+                        );
+                        currentVector.x2 = snapped.x;
+                        currentVector.y2 = snapped.y;
                     }
                 } else {
                     currentVector.x2 = pt.x;
@@ -2557,18 +2542,20 @@
             }
         }
 
-        function handleCreateNote(e) {
-            e.preventDefault();
-            if (state.isFrozen && state.role !== 'teacher') {
-                showToast('La lavagna è bloccata dal docente.', 'error');
-                return;
-            }
-            const input = document.getElementById('new-note-input');
-            const text = input.value.trim();
+        function confirmNewFreeText() {
+            const input = document.getElementById('new-free-text-input');
+            const text = input ? input.value.trim() : '';
             if (!text) return;
-
-            createBoardItem({ type: 'note', text });
+            const clamped = clampCoordsToStudentZone(Math.max(20, pendingTextCoords.x), Math.max(20, pendingTextCoords.y), 180, 40);
+            createBoardItem({
+                type: 'text',
+                text: text,
+                textSize: state.freeTextSize || 'lg',
+                x: clamped.x,
+                y: clamped.y
+            });
             input.value = '';
+            closeNewTextModal();
             setActiveTool('select');
         }
 
@@ -2582,12 +2569,29 @@
             const type = data.type || 'note';
             const store = getActiveBoardStore();
             const viewport = document.getElementById('board-viewport');
-            const centerX = Math.round(((viewport ? viewport.scrollLeft : 0) + (viewport ? viewport.clientWidth / 2 : 450)) / state.zoom) - 110;
-            const centerY = Math.round(((viewport ? viewport.scrollTop : 0) + (viewport ? viewport.clientHeight / 2 : 320)) / state.zoom) - 75;
             const jitterX = ((store.items.length % 5) - 2) * 28;
             const jitterY = ((store.items.length % 4) - 1) * 24;
-            const defaultX = Math.max(80, centerX + jitterX);
-            const defaultY = Math.max(80, centerY + jitterY);
+            let defaultX = Math.max(80, Math.round(((viewport ? viewport.scrollLeft : 0) + (viewport ? viewport.clientWidth / 2 : 450)) / state.zoom) - 110 + jitterX);
+            let defaultY = Math.max(80, Math.round(((viewport ? viewport.scrollTop : 0) + (viewport ? viewport.clientHeight / 2 : 320)) / state.zoom) - 75 + jitterY);
+
+            const itemW = data.width || (type === 'image' ? 280 : (type === 'note' ? 225 : 140));
+            const itemH = data.height || (type === 'note' ? 150 : 80);
+
+            // Se lo studente è in un gruppo, posiziona il nuovo elemento direttamente al centro del suo riquadro!
+            if (state.role !== 'teacher' && state.teamCount > 0 && state.myGroup) {
+                if (state.groupSpaceMode === 'shared') {
+                    const z = getGroupZoneBounds(state.myGroup, state.teamCount);
+                    defaultX = z.innerX + 24 + ((store.items.length % 3) * 35);
+                    defaultY = z.innerY + 24 + ((store.items.length % 4) * 35);
+                } else {
+                    defaultX = 120 + ((store.items.length % 4) * 40);
+                    defaultY = 120 + ((store.items.length % 4) * 40);
+                }
+            }
+
+            const rawX = typeof data.x === 'number' ? data.x : defaultX;
+            const rawY = typeof data.y === 'number' ? data.y : defaultY;
+            const safeCoords = clampCoordsToStudentZone(rawX, rawY, itemW, itemH);
 
             const item = {
                 id: 'item-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
@@ -2602,8 +2606,8 @@
                 authorId: data.authorId || state.userId,
                 lockedByTeacher: isTeacher,
                 group: data.group || state.myGroup || null,
-                x: typeof data.x === 'number' ? data.x : defaultX,
-                y: typeof data.y === 'number' ? data.y : defaultY,
+                x: safeCoords.x,
+                y: safeCoords.y,
                 rotation: typeof data.rotation === 'number' ? data.rotation : 0,
                 votes: 0,
                 votedBy: [],
@@ -2964,8 +2968,12 @@
                 const dx = (clientX - startX) / state.zoom;
                 const dy = (clientY - startY) / state.zoom;
 
-                item.x = Math.max(0, Math.min(3000, Math.round(origX + dx)));
-                item.y = Math.max(0, Math.min(2000, Math.round(origY + dy)));
+                const rawNextX = Math.max(0, Math.min(3000, Math.round(origX + dx)));
+                const rawNextY = Math.max(0, Math.min(2000, Math.round(origY + dy)));
+                const clamped = clampCoordsToStudentZone(rawNextX, rawNextY, item.width || 225, item.height || 145);
+
+                item.x = clamped.x;
+                item.y = clamped.y;
 
                 element.style.left = `${item.x}px`;
                 element.style.top = `${item.y}px`;
@@ -3190,35 +3198,64 @@
                 return `${theme.bg} ${theme.border}`;
             };
 
+            const isStudentInSharedTeam = state.role !== 'teacher' && state.teamCount > 0 && state.groupSpaceMode === 'shared' && state.myGroup;
+            const renderMaskedZone = (groupIndex, key, fallbackColor, extraClass = '') => {
+                const isMyZone = !isStudentInSharedTeam || state.myGroup === groupIndex;
+                if (isMyZone) {
+                    return `
+                        <div class="${getBoxClasses(key, fallbackColor)} border-2 border-dashed rounded-3xl p-5 flex flex-col ${extraClass}">
+                            ${renderHeader(key, fallbackColor)}
+                        </div>
+                    `;
+                }
+                return `
+                    <div class="bg-slate-200/90 border-2 border-slate-300 rounded-3xl p-5 flex flex-col items-center justify-center text-center select-none ${extraClass}">
+                        <div class="bg-white/80 px-4 py-2.5 rounded-2xl border border-slate-300 shadow-xs">
+                            <span class="text-xs font-extrabold uppercase tracking-wider text-slate-500 block">🔒 Area riservata al Gruppo ${groupIndex}</span>
+                            <span class="text-[11px] text-slate-400">Puoi lavorare solo nello spazio del tuo gruppo</span>
+                        </div>
+                    </div>
+                `;
+            };
+
+            // Nelle stanze separate lo studente lavora in una lavagna privata tutta sua senza riquadri degli altri gruppi
+            if (state.role !== 'teacher' && state.teamCount > 0 && state.groupSpaceMode === 'separate' && state.myGroup) {
+                const myThemeMap = {
+                    1: { key: 'q1', color: 'amber', title: '🟡 Stanza Privata • Gruppo 1 (Giallo)' },
+                    2: { key: 'q2', color: 'sky',   title: '🔵 Stanza Privata • Gruppo 2 (Azzurro)' },
+                    3: { key: 'q3', color: 'rose',  title: '🔴 Stanza Privata • Gruppo 3 (Rosa)' },
+                    4: { key: 'q4', color: 'emerald', title: '🟢 Stanza Privata • Gruppo 4 (Verde)' }
+                };
+                const mt = myThemeMap[state.myGroup] || myThemeMap[1];
+                const theme = SECTION_COLOR_THEMES[mt.color];
+                bgLayer.innerHTML = `
+                    <div class="h-full p-8 pt-20">
+                        <div class="${theme.bg} ${theme.border} border-2 border-dashed rounded-3xl p-5 h-full flex flex-col">
+                            <div class="inline-flex items-center gap-2 ${theme.header} font-extrabold text-sm sm:text-base uppercase tracking-wider px-3.5 py-1.5 rounded-xl mb-3 self-start">
+                                <span>${mt.title}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
             if (state.template === 'kanban') {
                 bgLayer.innerHTML = `
                     <div class="grid grid-cols-3 gap-6 h-full p-8 pt-20">
-                        <div class="${getBoxClasses('col1', 'emerald')} border-2 border-dashed rounded-3xl p-5 flex flex-col">
-                            ${renderHeader('col1', 'emerald')}
-                        </div>
-                        <div class="${getBoxClasses('col2', 'amber')} border-2 border-dashed rounded-3xl p-5 flex flex-col">
-                            ${renderHeader('col2', 'amber')}
-                        </div>
-                        <div class="${getBoxClasses('col3', 'rose')} border-2 border-dashed rounded-3xl p-5 flex flex-col">
-                            ${renderHeader('col3', 'rose')}
-                        </div>
+                        ${renderMaskedZone(1, 'col1', 'emerald')}
+                        ${renderMaskedZone(2, 'col2', 'amber')}
+                        ${renderMaskedZone(3, 'col3', 'rose')}
                     </div>
                 `;
             } else if (state.template === 'quadrants') {
                 bgLayer.innerHTML = `
                     <div class="grid grid-cols-2 grid-rows-2 gap-6 h-full p-8 pt-20">
-                        <div class="${getBoxClasses('q1', 'amber')} border-2 rounded-3xl p-5">
-                            ${renderHeader('q1', 'amber')}
-                        </div>
-                        <div class="${getBoxClasses('q2', 'sky')} border-2 rounded-3xl p-5">
-                            ${renderHeader('q2', 'sky')}
-                        </div>
-                        <div class="${getBoxClasses('q3', 'rose')} border-2 rounded-3xl p-5">
-                            ${renderHeader('q3', 'rose')}
-                        </div>
-                        <div class="${getBoxClasses('q4', 'emerald')} border-2 rounded-3xl p-5">
-                            ${renderHeader('q4', 'emerald')}
-                        </div>
+                        ${renderMaskedZone(1, 'q1', 'amber')}
+                        ${renderMaskedZone(2, 'q2', 'sky')}
+                        ${renderMaskedZone(3, 'q3', 'rose')}
+                        ${renderMaskedZone(4, 'q4', 'emerald')}
                     </div>
                 `;
             } else if (state.template === 'timeline') {
@@ -3267,12 +3304,8 @@
             } else if (state.template === 'cols2') {
                 bgLayer.innerHTML = `
                     <div class="grid grid-cols-2 gap-6 h-full p-8 pt-20">
-                        <div class="${getBoxClasses('col1', 'amber')} border-2 rounded-3xl p-5 flex flex-col">
-                            ${renderHeader('col1', 'amber')}
-                        </div>
-                        <div class="${getBoxClasses('col2', 'sky')} border-2 rounded-3xl p-5 flex flex-col">
-                            ${renderHeader('col2', 'sky')}
-                        </div>
+                        ${renderMaskedZone(1, 'col1', 'amber')}
+                        ${renderMaskedZone(2, 'col2', 'sky')}
                     </div>
                 `;
             }
@@ -3444,45 +3477,30 @@
         function mergeGroupsIntoMainBoard() {
             if (state.role !== 'teacher') return;
 
-            const activeGroups = Math.max(2, Math.min(4, state.teamCount || 2));
+            // Calcola automaticamente il numero di gruppi reali (usando sia teamCount sia gli studenti assegnati o le stanze piene)
+            let maxGroupFound = state.teamCount || 0;
+            Object.values(connectedStudents).forEach(s => {
+                if (s && s.group && s.group > maxGroupFound) maxGroupFound = s.group;
+            });
+            for (let g = 1; g <= 4; g++) {
+                const gb = state.groupBoards['g' + g];
+                if (gb && (gb.items.length > 0 || gb.vectors.length > 0) && g > maxGroupFound) {
+                    maxGroupFound = g;
+                }
+            }
+            const activeGroups = Math.max(2, Math.min(4, maxGroupFound));
+            state.teamCount = activeGroups;
+
             const groupColors = { g1: 'yellow', g2: 'blue', g3: 'pink', g4: 'green' };
-            const boardW = 1600;
-            const boardH = 980;
-            const padX = 48;
-            const padTop = 95;
-            const gap = 28;
-            const headerOffset = 68;
 
             // 1. Imposta automaticamente il layout a 2, 3 o 4 riquadri colorati sulla Lavagna Comune
             applyGroupZonesTemplate(activeGroups);
 
-            // Calcola i rettangoli di destinazione per ciascun gruppo
-            const getZoneRect = (idx) => {
-                if (activeGroups === 2 || activeGroups === 3) {
-                    const colW = (boardW - padX * 2 - gap * (activeGroups - 1)) / activeGroups;
-                    return {
-                        x: padX + idx * (colW + gap) + 18,
-                        y: padTop + headerOffset,
-                        w: Math.max(220, colW - 36),
-                        h: Math.max(300, boardH - padTop - headerOffset - 40)
-                    };
-                }
-                const cellW = (boardW - padX * 2 - gap) / 2;
-                const cellH = (boardH - padTop - gap - 32) / 2;
-                const col = idx % 2;
-                const row = Math.floor(idx / 2);
-                return {
-                    x: padX + col * (cellW + gap) + 18,
-                    y: padTop + row * (cellH + gap) + headerOffset,
-                    w: Math.max(240, cellW - 36),
-                    h: Math.max(220, cellH - headerOffset - 24)
-                };
-            };
-
             let copiedCount = 0;
 
             for (let idx = 0; idx < activeGroups; idx++) {
-                const gk = 'g' + (idx + 1);
+                const groupNum = idx + 1;
+                const gk = 'g' + groupNum;
                 const gb = state.groupBoards[gk];
                 if (!gb) continue;
 
@@ -3490,7 +3508,7 @@
                 const newVecs = gb.vectors.filter(vc => !state.vectors.some(ex => ex.id === vc.id));
                 if (newItems.length === 0 && newVecs.length === 0) continue;
 
-                // Calcola l'ingombro originale (bounding box) del gruppo per evitare sovrapposizioni
+                // Calcola l'ingombro originale (bounding box) del gruppo per mapparlo proporzionalmente nel suo riquadro
                 let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
                 newItems.forEach(it => {
                     const iw = it.width || 225;
@@ -3520,12 +3538,12 @@
 
                 const srcW = Math.max(260, maxX - minX);
                 const srcH = Math.max(200, maxY - minY);
-                const zone = getZoneRect(idx);
-                const scale = Math.min(1, zone.w / srcW, zone.h / srcH);
+                const z = getGroupZoneBounds(groupNum, activeGroups);
+                const scale = Math.min(1, z.innerW / srcW, z.innerH / srcH);
 
                 newItems.forEach(item => {
-                    const mappedX = Math.round(zone.x + (item.x - minX) * scale);
-                    const mappedY = Math.round(zone.y + (item.y - minY) * scale);
+                    const mappedX = Math.round(z.innerX + (item.x - minX) * scale);
+                    const mappedY = Math.round(z.innerY + (item.y - minY) * scale);
                     const mappedW = item.width ? Math.max(155, Math.round(item.width * scale)) : item.width;
                     const mappedH = item.height ? Math.max(115, Math.round(item.height * scale)) : item.height;
 
@@ -3535,7 +3553,7 @@
                         y: mappedY,
                         width: mappedW,
                         height: mappedH,
-                        group: idx + 1,
+                        group: groupNum,
                         color: item.type === 'note' ? (groupColors[gk] || item.color) : item.color
                     });
                     copiedCount++;
@@ -3546,17 +3564,17 @@
                         state.vectors.push({
                             ...vec,
                             points: vec.points.map(p => ({
-                                x: Math.round(zone.x + (p.x - minX) * scale),
-                                y: Math.round(zone.y + (p.y - minY) * scale)
+                                x: Math.round(z.innerX + (p.x - minX) * scale),
+                                y: Math.round(z.innerY + (p.y - minY) * scale)
                             }))
                         });
                     } else {
                         state.vectors.push({
                             ...vec,
-                            x1: Math.round(zone.x + (vec.x1 - minX) * scale),
-                            y1: Math.round(zone.y + (vec.y1 - minY) * scale),
-                            x2: Math.round(zone.x + (vec.x2 - minX) * scale),
-                            y2: Math.round(zone.y + (vec.y2 - minY) * scale)
+                            x1: Math.round(z.innerX + (vec.x1 - minX) * scale),
+                            y1: Math.round(z.innerY + (vec.y1 - minY) * scale),
+                            x2: Math.round(z.innerX + (vec.x2 - minX) * scale),
+                            y2: Math.round(z.innerY + (vec.y2 - minY) * scale)
                         });
                     }
                     copiedCount++;
@@ -4073,6 +4091,21 @@
         });
 
         window.onload = function () {
+            const params = new URLSearchParams(window.location.search);
+            const roomParam = params.get('room');
+            if (roomParam) {
+                document.getElementById('input-room-code').value = roomParam.toUpperCase();
+            }
+            if (params.has('docente')) {
+                hasTeacherUrlKey = true;
+                const btnTeacher = document.getElementById('btn-role-teacher');
+                if (btnTeacher) {
+                    btnTeacher.classList.remove('hidden');
+                    btnTeacher.classList.add('flex');
+                }
+                selectRole('teacher');
+            }
+            checkSavedSessionOnBoot();
             initCanvasInteractions();
             initZoomGestures();
             lucide.createIcons();
