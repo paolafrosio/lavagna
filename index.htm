@@ -179,6 +179,37 @@
         <!-- Popolato dinamicamente se il docente attiva le squadre -->
     </div>
 
+    <!-- BARRA SCHEDE STANZE GRUPPO (Visibile SOLO al Docente quando attiva Stanze Separate) -->
+    <div id="teacher-rooms-bar" class="hidden bg-slate-900 text-white px-3 sm:px-5 py-2 flex items-center justify-between gap-2 z-20 border-b border-slate-700 overflow-x-auto no-scrollbar">
+        <div class="flex items-center gap-1.5 shrink-0">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-1 hidden sm:inline">Vista LIM:</span>
+            <button type="button" onclick="switchTeacherBoardView('main')" data-boardview="main"
+                class="boardview-btn px-3 py-1 rounded-xl bg-indigo-600 text-white text-xs font-extrabold transition-all cursor-pointer">
+                Lavagna Comune
+            </button>
+            <button type="button" onclick="switchTeacherBoardView('g1')" data-boardview="g1"
+                class="boardview-btn hidden px-3 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-bold transition-all cursor-pointer">
+                🟡 Gruppo 1
+            </button>
+            <button type="button" onclick="switchTeacherBoardView('g2')" data-boardview="g2"
+                class="boardview-btn hidden px-3 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-300 text-xs font-bold transition-all cursor-pointer">
+                🔵 Gruppo 2
+            </button>
+            <button type="button" onclick="switchTeacherBoardView('g3')" data-boardview="g3"
+                class="boardview-btn hidden px-3 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-rose-300 text-xs font-bold transition-all cursor-pointer">
+                🔴 Gruppo 3
+            </button>
+            <button type="button" onclick="switchTeacherBoardView('g4')" data-boardview="g4"
+                class="boardview-btn hidden px-3 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-300 text-xs font-bold transition-all cursor-pointer">
+                🟢 Gruppo 4
+            </button>
+        </div>
+        <button type="button" onclick="mergeGroupsIntoMainBoard()" title="Copia tutti i post-it dei gruppi nella Lavagna Comune"
+            class="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shrink-0 cursor-pointer">
+            Riunisci nella Comune
+        </button>
+    </div>
+
     <!-- AREA CENTRALE LAVAGNA (CANVAS INTERATTIVO) -->
     <main id="board-viewport" class="relative flex-1 overflow-auto board-grid">
         <div id="board-zoom-sizer" class="relative w-[3000px] h-[2000px]">
@@ -467,6 +498,19 @@
                 <button type="button" onclick="setTeamCount(3)" data-teams="3" class="team-btn py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-bold cursor-pointer">3 Squadre</button>
                 <button type="button" onclick="setTeamCount(4)" data-teams="4" class="team-btn py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-bold cursor-pointer">4 Squadre</button>
             </div>
+            <div id="group-mode-selector" class="hidden mt-2 grid grid-cols-2 gap-1.5 bg-slate-100 p-1 rounded-xl">
+                <button type="button" onclick="setGroupSpaceMode('shared')" data-gmode="shared"
+                    class="gmode-btn py-1.5 px-2 rounded-lg bg-white text-indigo-700 shadow-xs text-[11px] font-extrabold cursor-pointer">
+                    Lavagna Unica
+                </button>
+                <button type="button" onclick="setGroupSpaceMode('separate')" data-gmode="separate"
+                    class="gmode-btn py-1.5 px-2 rounded-lg text-slate-600 hover:text-slate-900 text-[11px] font-bold cursor-pointer">
+                    Stanze Separate
+                </button>
+            </div>
+            <p id="group-mode-hint" class="hidden text-[11px] text-slate-500 mt-1">
+                Clicca su uno studente sopra per spostarlo di gruppo.
+            </p>
         </div>
 
         <div>
@@ -723,16 +767,57 @@
                 pro: 'emerald', con: 'rose'
             },
             teamCount: 0,
+            groupSpaceMode: 'shared', // 'shared' (lavagna unica) oppure 'separate' (stanze separate per gruppo)
+            teacherBoardView: 'main', // 'main', 'g1', 'g2', 'g3', 'g4'
             myGroup: null,
             isFrozen: false,
             isRoomLocked: false,
             zoom: 1,
             items: [],
             vectors: [],
+            groupBoards: {
+                g1: { items: [], vectors: [] },
+                g2: { items: [], vectors: [] },
+                g3: { items: [], vectors: [] },
+                g4: { items: [], vectors: [] }
+            },
             maxZIndex: 10,
             timerSeconds: 0,
             timerRunning: false
         };
+
+        function getActiveBoardKey() {
+            if (state.teamCount > 0 && state.groupSpaceMode === 'separate') {
+                if (state.role === 'teacher') {
+                    return state.teacherBoardView || 'main';
+                }
+                if (state.myGroup && state.myGroup >= 1 && state.myGroup <= 4) {
+                    return 'g' + state.myGroup;
+                }
+            }
+            return 'main';
+        }
+
+        function getActiveBoardStore() {
+            const key = getActiveBoardKey();
+            if (key === 'main') {
+                return { items: state.items, vectors: state.vectors };
+            }
+            if (!state.groupBoards[key]) {
+                state.groupBoards[key] = { items: [], vectors: [] };
+            }
+            return state.groupBoards[key];
+        }
+
+        function getBoardStoreByKey(key) {
+            if (!key || key === 'main') {
+                return { items: state.items, vectors: state.vectors };
+            }
+            if (!state.groupBoards[key]) {
+                state.groupBoards[key] = { items: [], vectors: [] };
+            }
+            return state.groupBoards[key];
+        }
 
         const DEFAULT_SECTION_COLORS = {
             col1: 'emerald', col2: 'amber', col3: 'rose',
@@ -1043,11 +1128,13 @@
             return {
                 items: state.items,
                 vectors: state.vectors,
+                groupBoards: state.groupBoards,
                 template: state.template,
                 sectionTitles: state.sectionTitles,
                 sectionColors: state.sectionColors,
                 isFrozen: state.isFrozen,
                 teamCount: state.teamCount,
+                groupSpaceMode: state.groupSpaceMode,
                 students: connectedStudents,
                 timerSeconds: state.timerSeconds,
                 timerRunning: state.timerRunning
@@ -1094,57 +1181,96 @@
                 broadcastState();
             } else if (msg.type === 'ADD_ITEM') {
                 if (state.isFrozen) return;
-                state.items.push(msg.payload);
-                renderSingleItem(msg.payload);
-                updateBoardEmptyState();
+                const student = Object.values(connectedStudents).find(s => s.peerId === conn.peer);
+                const targetKey = (state.teamCount > 0 && state.groupSpaceMode === 'separate' && student && student.group)
+                    ? ('g' + student.group)
+                    : (msg.boardKey || 'main');
+                const store = getBoardStoreByKey(targetKey);
+                store.items.push(msg.payload);
+                if (getActiveBoardKey() === targetKey) {
+                    renderSingleItem(msg.payload);
+                    updateBoardEmptyState();
+                }
                 broadcastState();
             } else if (msg.type === 'MOVE_ITEM') {
                 if (state.isFrozen) return;
-                const item = state.items.find(n => n.id === msg.payload.id);
+                const student = Object.values(connectedStudents).find(s => s.peerId === conn.peer);
+                const targetKey = (state.teamCount > 0 && state.groupSpaceMode === 'separate' && student && student.group)
+                    ? ('g' + student.group)
+                    : (msg.boardKey || 'main');
+                const store = getBoardStoreByKey(targetKey);
+                const item = store.items.find(n => n.id === msg.payload.id);
                 if (item && !item.lockedByTeacher) {
                     item.x = msg.payload.x;
                     item.y = msg.payload.y;
                     item.zIndex = ++state.maxZIndex;
-                    renderSingleItem(item);
+                    if (getActiveBoardKey() === targetKey) renderSingleItem(item);
                     broadcastState();
                 }
             } else if (msg.type === 'RESIZE_ITEM') {
                 if (state.isFrozen) return;
-                const item = state.items.find(n => n.id === msg.payload.id);
+                const student = Object.values(connectedStudents).find(s => s.peerId === conn.peer);
+                const targetKey = (state.teamCount > 0 && state.groupSpaceMode === 'separate' && student && student.group)
+                    ? ('g' + student.group)
+                    : (msg.boardKey || 'main');
+                const store = getBoardStoreByKey(targetKey);
+                const item = store.items.find(n => n.id === msg.payload.id);
                 if (item && !item.lockedByTeacher) {
                     item.width = msg.payload.width;
                     if (msg.payload.height) item.height = msg.payload.height;
-                    renderSingleItem(item);
+                    if (getActiveBoardKey() === targetKey) renderSingleItem(item);
                     broadcastState();
                 }
             } else if (msg.type === 'ROTATE_ITEM') {
                 if (state.isFrozen) return;
-                const item = state.items.find(n => n.id === msg.payload.id);
+                const student = Object.values(connectedStudents).find(s => s.peerId === conn.peer);
+                const targetKey = (state.teamCount > 0 && state.groupSpaceMode === 'separate' && student && student.group)
+                    ? ('g' + student.group)
+                    : (msg.boardKey || 'main');
+                const store = getBoardStoreByKey(targetKey);
+                const item = store.items.find(n => n.id === msg.payload.id);
                 if (item && !item.lockedByTeacher) {
                     item.rotation = msg.payload.rotation || 0;
-                    renderSingleItem(item);
+                    if (getActiveBoardKey() === targetKey) renderSingleItem(item);
                     broadcastState();
                 }
             } else if (msg.type === 'EDIT_ITEM') {
                 if (state.isFrozen) return;
-                const item = state.items.find(n => n.id === msg.payload.id);
+                const student = Object.values(connectedStudents).find(s => s.peerId === conn.peer);
+                const targetKey = (state.teamCount > 0 && state.groupSpaceMode === 'separate' && student && student.group)
+                    ? ('g' + student.group)
+                    : (msg.boardKey || 'main');
+                const store = getBoardStoreByKey(targetKey);
+                const item = store.items.find(n => n.id === msg.payload.id);
                 if (item && !item.lockedByTeacher) {
                     item.text = msg.payload.text;
                     if (msg.payload.color) item.color = msg.payload.color;
-                    renderSingleItem(item);
+                    if (getActiveBoardKey() === targetKey) renderSingleItem(item);
                     broadcastState();
                 }
             } else if (msg.type === 'DELETE_ITEM') {
                 if (state.isFrozen) return;
-                const targetItem = state.items.find(n => n.id === msg.payload);
+                const student = Object.values(connectedStudents).find(s => s.peerId === conn.peer);
+                const targetKey = (state.teamCount > 0 && state.groupSpaceMode === 'separate' && student && student.group)
+                    ? ('g' + student.group)
+                    : (msg.boardKey || 'main');
+                const store = getBoardStoreByKey(targetKey);
+                const targetItem = store.items.find(n => n.id === msg.payload);
                 if (!targetItem || targetItem.lockedByTeacher) return;
-                state.items = state.items.filter(n => n.id !== msg.payload);
-                const el = document.getElementById(msg.payload);
-                if (el) el.remove();
-                updateBoardEmptyState();
+                store.items = store.items.filter(n => n.id !== msg.payload);
+                if (getActiveBoardKey() === targetKey) {
+                    const el = document.getElementById(msg.payload);
+                    if (el) el.remove();
+                    updateBoardEmptyState();
+                }
                 broadcastState();
             } else if (msg.type === 'VOTE_ITEM') {
-                const item = state.items.find(n => n.id === msg.payload.id);
+                const student = Object.values(connectedStudents).find(s => s.peerId === conn.peer);
+                const targetKey = (state.teamCount > 0 && state.groupSpaceMode === 'separate' && student && student.group)
+                    ? ('g' + student.group)
+                    : (msg.boardKey || 'main');
+                const store = getBoardStoreByKey(targetKey);
+                const item = store.items.find(n => n.id === msg.payload.id);
                 if (item) {
                     const voter = msg.payload.userId;
                     if (!item.votedBy) item.votedBy = [];
@@ -1152,24 +1278,39 @@
                     if (idx === -1) item.votedBy.push(voter);
                     else item.votedBy.splice(idx, 1);
                     item.votes = item.votedBy.length;
-                    renderSingleItem(item);
+                    if (getActiveBoardKey() === targetKey) renderSingleItem(item);
                     broadcastState();
                 }
             } else if (msg.type === 'ADD_VECTOR') {
                 if (state.isFrozen) return;
-                state.vectors.push(msg.payload);
-                renderAllVectors();
+                const student = Object.values(connectedStudents).find(s => s.peerId === conn.peer);
+                const targetKey = (state.teamCount > 0 && state.groupSpaceMode === 'separate' && student && student.group)
+                    ? ('g' + student.group)
+                    : (msg.boardKey || 'main');
+                const store = getBoardStoreByKey(targetKey);
+                store.vectors.push(msg.payload);
+                if (getActiveBoardKey() === targetKey) renderAllVectors();
                 broadcastState();
             } else if (msg.type === 'DELETE_VECTOR') {
                 if (state.isFrozen) return;
-                const targetVec = state.vectors.find(v => v.id === msg.payload);
+                const student = Object.values(connectedStudents).find(s => s.peerId === conn.peer);
+                const targetKey = (state.teamCount > 0 && state.groupSpaceMode === 'separate' && student && student.group)
+                    ? ('g' + student.group)
+                    : (msg.boardKey || 'main');
+                const store = getBoardStoreByKey(targetKey);
+                const targetVec = store.vectors.find(v => v.id === msg.payload);
                 if (!targetVec || targetVec.lockedByTeacher) return;
-                state.vectors = state.vectors.filter(v => v.id !== msg.payload);
-                renderAllVectors();
+                store.vectors = store.vectors.filter(v => v.id !== msg.payload);
+                if (getActiveBoardKey() === targetKey) renderAllVectors();
                 broadcastState();
             } else if (msg.type === 'MOVE_VECTOR') {
                 if (state.isFrozen) return;
-                const vec = state.vectors.find(v => v.id === msg.payload.id);
+                const student = Object.values(connectedStudents).find(s => s.peerId === conn.peer);
+                const targetKey = (state.teamCount > 0 && state.groupSpaceMode === 'separate' && student && student.group)
+                    ? ('g' + student.group)
+                    : (msg.boardKey || 'main');
+                const store = getBoardStoreByKey(targetKey);
+                const vec = store.vectors.find(v => v.id === msg.payload.id);
                 if (vec && !vec.lockedByTeacher) {
                     if (vec.type === 'pen' && Array.isArray(msg.payload.points)) {
                         vec.points = msg.payload.points;
@@ -1182,12 +1323,20 @@
                     if (typeof msg.payload.rotation === 'number') {
                         vec.rotation = msg.payload.rotation;
                     }
-                    renderAllVectors();
+                    if (getActiveBoardKey() === targetKey) renderAllVectors();
                     broadcastState();
                 }
             } else if (msg.type === 'CURSOR_MOVE') {
                 const { userId, name, x, y } = msg.payload || {};
                 if (!userId || typeof x !== 'number' || typeof y !== 'number') return;
+                const student = connectedStudents[userId];
+                const studentKey = (state.teamCount > 0 && state.groupSpaceMode === 'separate' && student && student.group)
+                    ? ('g' + student.group)
+                    : 'main';
+                if (getActiveBoardKey() !== studentKey) {
+                    removeRemoteCursor(userId);
+                    return;
+                }
                 renderRemoteCursor(userId, name || 'Studente', x, y);
             }
         }
@@ -1277,11 +1426,13 @@
             const data = msg.payload;
             state.items = data.items || [];
             state.vectors = data.vectors || [];
+            if (data.groupBoards) state.groupBoards = data.groupBoards;
             state.template = data.template || 'blank';
             if (data.sectionTitles) state.sectionTitles = data.sectionTitles;
             if (data.sectionColors) state.sectionColors = data.sectionColors;
             state.isFrozen = !!data.isFrozen;
             state.teamCount = data.teamCount || 0;
+            state.groupSpaceMode = data.groupSpaceMode || 'shared';
             state.timerSeconds = data.timerSeconds || 0;
             state.timerRunning = !!data.timerRunning;
 
@@ -1315,7 +1466,8 @@
             const t = teamNames[state.myGroup];
             if (t) {
                 banner.className = `${t.bg} text-white text-center text-xs font-bold py-1.5 px-4 z-20 shadow-xs`;
-                banner.textContent = `👥 Fai parte del ${t.label}`;
+                const roomNote = state.groupSpaceMode === 'separate' ? ' (Stanza privata del gruppo)' : '';
+                banner.textContent = `👥 Fai parte del ${t.label}${roomNote}`;
                 banner.classList.remove('hidden');
                 selectNoteColor(t.color);
             }
@@ -1547,8 +1699,9 @@
         function eraseVectorsNearPoint(pt) {
             const threshold = 24 / state.zoom;
             const toDelete = [];
+            const activeVectors = getActiveBoardStore().vectors;
 
-            for (const vec of state.vectors) {
+            for (const vec of activeVectors) {
                 let hit = false;
                 if (vec.type === 'pen' && Array.isArray(vec.points)) {
                     for (let i = 0; i < vec.points.length - 1; i++) {
@@ -1756,8 +1909,9 @@
 
                 if (isValid) {
                     const createdType = currentVector.type;
-                    state.vectors.push(currentVector);
-                    sendToHost({ type: 'ADD_VECTOR', payload: currentVector });
+                    const activeBoardKey = getActiveBoardKey();
+                    getActiveBoardStore().vectors.push(currentVector);
+                    sendToHost({ type: 'ADD_VECTOR', boardKey: activeBoardKey, payload: currentVector });
                     if (state.role === 'teacher') broadcastState();
 
                     // Dopo aver tracciato una forma o una freccia, torna subito al puntatore
@@ -1901,8 +2055,9 @@
 
         function renderAllVectors() {
             const layer = document.getElementById('vectors-layer');
+            const activeVectors = getActiveBoardStore().vectors;
             if (layer) {
-                layer.innerHTML = state.vectors.map(v => buildVectorSvgHtml(v, false)).join('');
+                layer.innerHTML = activeVectors.map(v => buildVectorSvgHtml(v, false)).join('');
             }
             renderEraserHandles();
         }
@@ -1922,8 +2077,9 @@
             const typeLabels = { pen: 'Tratto', arrow: 'Freccia', shape: 'Riquadro' };
             const isEraserMode = state.activeTool === 'eraser';
             const isSelectOrEraser = state.activeTool === 'select' || isEraserMode;
+            const activeVectors = getActiveBoardStore().vectors;
 
-            state.vectors.forEach((vec, index) => {
+            activeVectors.forEach((vec, index) => {
                 const isProtectedFromStudent = state.role !== 'teacher' && Boolean(vec.lockedByTeacher);
                 if (isProtectedFromStudent) return;
 
@@ -2058,7 +2214,7 @@
 
                 const layer = document.getElementById('vectors-layer');
                 if (layer) {
-                    layer.innerHTML = state.vectors.map(v => buildVectorSvgHtml(v, false)).join('');
+                    layer.innerHTML = getActiveBoardStore().vectors.map(v => buildVectorSvgHtml(v, false)).join('');
                 }
             };
 
@@ -2079,6 +2235,7 @@
                 } else {
                     sendToHost({
                         type: 'MOVE_VECTOR',
+                        boardKey: getActiveBoardKey(),
                         payload: {
                             id: vec.id,
                             points: vec.points,
@@ -2149,7 +2306,7 @@
                 zone.style.transform = `rotate(${angle}deg)`;
                 const layer = document.getElementById('vectors-layer');
                 if (layer) {
-                    layer.innerHTML = state.vectors.map(v => buildVectorSvgHtml(v, false)).join('');
+                    layer.innerHTML = getActiveBoardStore().vectors.map(v => buildVectorSvgHtml(v, false)).join('');
                 }
             };
 
@@ -2167,6 +2324,7 @@
                 } else {
                     sendToHost({
                         type: 'MOVE_VECTOR',
+                        boardKey: getActiveBoardKey(),
                         payload: {
                             id: vec.id,
                             points: vec.points,
@@ -2202,13 +2360,14 @@
             }
             if (state.isFrozen && state.role !== 'teacher') return;
 
-            const targetVec = state.vectors.find(v => v.id === id);
+            const store = getActiveBoardStore();
+            const targetVec = store.vectors.find(v => v.id === id);
             if (!targetVec) return;
             if (state.role !== 'teacher' && targetVec.lockedByTeacher) return;
 
-            const prevLen = state.vectors.length;
-            state.vectors = state.vectors.filter(v => v.id !== id);
-            if (state.vectors.length === prevLen) return;
+            const prevLen = store.vectors.length;
+            store.vectors = store.vectors.filter(v => v.id !== id);
+            if (store.vectors.length === prevLen) return;
 
             renderAllVectors();
             updateBoardEmptyState();
@@ -2216,31 +2375,34 @@
             if (state.role === 'teacher') {
                 broadcastState();
             } else {
-                sendToHost({ type: 'DELETE_VECTOR', payload: id });
+                sendToHost({ type: 'DELETE_VECTOR', boardKey: getActiveBoardKey(), payload: id });
             }
         }
 
         function undoLastVector() {
             if (state.isFrozen && state.role !== 'teacher') return;
-            if (state.vectors.length === 0) return;
+            const activeVectors = getActiveBoardStore().vectors;
+            if (activeVectors.length === 0) return;
 
-            const last = state.vectors[state.vectors.length - 1];
+            const last = activeVectors[activeVectors.length - 1];
             eraseVectorById(last.id);
         }
 
         function clearAllVectors() {
             if (state.isFrozen && state.role !== 'teacher') return;
-            if (state.vectors.length === 0) return;
+            const store = getActiveBoardStore();
+            if (store.vectors.length === 0) return;
 
-            const ids = state.vectors.map(v => v.id);
-            state.vectors = [];
+            const ids = store.vectors.map(v => v.id);
+            store.vectors = [];
             renderAllVectors();
             updateBoardEmptyState();
 
             if (state.role === 'teacher') {
                 broadcastState();
             } else {
-                ids.forEach(id => sendToHost({ type: 'DELETE_VECTOR', payload: id }));
+                const bk = getActiveBoardKey();
+                ids.forEach(id => sendToHost({ type: 'DELETE_VECTOR', boardKey: bk, payload: id }));
             }
             showToast('Tutti i disegni sono stati cancellati.', 'info');
         }
@@ -2290,11 +2452,12 @@
             }
 
             const type = data.type || 'note';
+            const store = getActiveBoardStore();
             const viewport = document.getElementById('board-viewport');
             const centerX = Math.round(((viewport ? viewport.scrollLeft : 0) + (viewport ? viewport.clientWidth / 2 : 450)) / state.zoom) - 110;
             const centerY = Math.round(((viewport ? viewport.scrollTop : 0) + (viewport ? viewport.clientHeight / 2 : 320)) / state.zoom) - 75;
-            const jitterX = ((state.items.length % 5) - 2) * 28;
-            const jitterY = ((state.items.length % 4) - 1) * 24;
+            const jitterX = ((store.items.length % 5) - 2) * 28;
+            const jitterY = ((store.items.length % 4) - 1) * 24;
             const defaultX = Math.max(80, centerX + jitterX);
             const defaultY = Math.max(80, centerY + jitterY);
 
@@ -2319,21 +2482,22 @@
                 zIndex: ++state.maxZIndex
             };
 
-            state.items.push(item);
+            store.items.push(item);
             renderSingleItem(item);
             updateBoardEmptyState();
 
             if (isTeacher) {
                 broadcastState();
             } else {
-                sendToHost({ type: 'ADD_ITEM', payload: item });
+                sendToHost({ type: 'ADD_ITEM', boardKey: getActiveBoardKey(), payload: item });
             }
         }
 
         function renderAllItems() {
             const container = document.getElementById('items-layer');
             container.innerHTML = '';
-            state.items.forEach(item => renderSingleItem(item));
+            const activeItems = getActiveBoardStore().items;
+            activeItems.forEach(item => renderSingleItem(item));
             updateBoardEmptyState();
             lucide.createIcons();
         }
@@ -2561,6 +2725,7 @@
                 } else {
                     sendToHost({
                         type: 'ROTATE_ITEM',
+                        boardKey: getActiveBoardKey(),
                         payload: { id: item.id, rotation: item.rotation || 0 }
                     });
                 }
@@ -2643,6 +2808,7 @@
                 } else {
                     sendToHost({
                         type: 'RESIZE_ITEM',
+                        boardKey: getActiveBoardKey(),
                         payload: { id: item.id, width: item.width, height: item.height }
                     });
                 }
@@ -2691,6 +2857,7 @@
                 } else {
                     sendToHost({
                         type: 'MOVE_ITEM',
+                        boardKey: getActiveBoardKey(),
                         payload: { id: item.id, x: item.x, y: item.y, zIndex: item.zIndex }
                     });
                 }
@@ -2728,7 +2895,8 @@
                 showToast('La lavagna è bloccata dal docente.', 'error');
                 return;
             }
-            state.items = state.items.filter(n => n.id !== id);
+            const store = getActiveBoardStore();
+            store.items = store.items.filter(n => n.id !== id);
             const el = document.getElementById(id);
             if (el) el.remove();
             updateBoardEmptyState();
@@ -2736,12 +2904,13 @@
             if (state.role === 'teacher') {
                 broadcastState();
             } else {
-                sendToHost({ type: 'DELETE_ITEM', payload: id });
+                sendToHost({ type: 'DELETE_ITEM', boardKey: getActiveBoardKey(), payload: id });
             }
         }
 
         function toggleVote(id) {
-            const item = state.items.find(n => n.id === id);
+            const store = getActiveBoardStore();
+            const item = store.items.find(n => n.id === id);
             if (!item) return;
             if (!item.votedBy) item.votedBy = [];
 
@@ -2758,7 +2927,7 @@
             if (state.role === 'teacher') {
                 broadcastState();
             } else {
-                sendToHost({ type: 'VOTE_ITEM', payload: { id, userId: state.userId } });
+                sendToHost({ type: 'VOTE_ITEM', boardKey: getActiveBoardKey(), payload: { id, userId: state.userId } });
             }
         }
 
@@ -2767,14 +2936,15 @@
                 showToast('La lavagna è bloccata dal docente.', 'error');
                 return;
             }
-            const item = state.items.find(n => n.id === id);
+            const store = getActiveBoardStore();
+            const item = store.items.find(n => n.id === id);
             if (!item || !NOTE_STYLES[color]) return;
             item.color = color;
             renderSingleItem(item);
             if (state.role === 'teacher') {
                 broadcastState();
             } else {
-                sendToHost({ type: 'EDIT_ITEM', payload: { id: item.id, text: item.text, color: color } });
+                sendToHost({ type: 'EDIT_ITEM', boardKey: getActiveBoardKey(), payload: { id: item.id, text: item.text, color: color } });
             }
         }
 
@@ -2783,7 +2953,8 @@
                 showToast('La lavagna è bloccata dal docente.', 'error');
                 return;
             }
-            const item = state.items.find(n => n.id === id);
+            const store = getActiveBoardStore();
+            const item = store.items.find(n => n.id === id);
             if (!item) return;
             editingNoteId = id;
             document.getElementById('edit-note-textarea').value = item.text;
@@ -2801,14 +2972,15 @@
             const newText = document.getElementById('edit-note-textarea').value.trim();
             if (!newText) return;
 
-            const item = state.items.find(n => n.id === editingNoteId);
+            const store = getActiveBoardStore();
+            const item = store.items.find(n => n.id === editingNoteId);
             if (item) {
                 item.text = newText;
                 renderSingleItem(item);
                 if (state.role === 'teacher') {
                     broadcastState();
                 } else {
-                    sendToHost({ type: 'EDIT_ITEM', payload: { id: item.id, text: newText } });
+                    sendToHost({ type: 'EDIT_ITEM', boardKey: getActiveBoardKey(), payload: { id: item.id, text: newText } });
                 }
             }
             closeEditModal();
@@ -2993,6 +3165,7 @@
                 Object.keys(connectedStudents).forEach(uid => {
                     connectedStudents[uid].group = null;
                 });
+                state.teacherBoardView = 'main';
                 showToast('Modalità squadre disattivata.', 'info');
             } else {
                 const studentIds = Object.keys(connectedStudents);
@@ -3002,8 +3175,136 @@
                 showToast(`Classe divisa in ${count} squadre!`, 'success');
             }
 
+            updateGroupModeUI();
+            updateParticipantsUI();
+            renderAllItems();
+            renderAllVectors();
+            broadcastState();
+        }
+
+        function setGroupSpaceMode(mode) {
+            if (state.role !== 'teacher') return;
+            state.groupSpaceMode = mode;
+            if (mode === 'shared') {
+                state.teacherBoardView = 'main';
+            }
+            updateGroupModeUI();
+            renderAllItems();
+            renderAllVectors();
+            broadcastState();
+            showToast(
+                mode === 'separate'
+                    ? 'Stanze separate attivate: ogni gruppo lavora nella propria lavagna.'
+                    : 'Lavagna unica attivata: tutti i gruppi condividono lo stesso spazio.',
+                'info'
+            );
+        }
+
+        function updateGroupModeUI() {
+            const selector = document.getElementById('group-mode-selector');
+            const hint = document.getElementById('group-mode-hint');
+            const roomsBar = document.getElementById('teacher-rooms-bar');
+
+            if (selector) {
+                if (state.teamCount > 0) selector.classList.remove('hidden');
+                else selector.classList.add('hidden');
+            }
+            if (hint) {
+                if (state.teamCount > 0) hint.classList.remove('hidden');
+                else hint.classList.add('hidden');
+            }
+
+            document.querySelectorAll('.gmode-btn').forEach(btn => {
+                if (btn.dataset.gmode === state.groupSpaceMode) {
+                    btn.className = 'gmode-btn py-1.5 px-2 rounded-lg bg-white text-indigo-700 shadow-xs text-[11px] font-extrabold cursor-pointer';
+                } else {
+                    btn.className = 'gmode-btn py-1.5 px-2 rounded-lg text-slate-600 hover:text-slate-900 text-[11px] font-bold cursor-pointer';
+                }
+            });
+
+            if (roomsBar && state.role === 'teacher') {
+                if (state.teamCount > 0 && state.groupSpaceMode === 'separate') {
+                    roomsBar.classList.remove('hidden');
+                    roomsBar.classList.add('flex');
+                    ['g1', 'g2', 'g3', 'g4'].forEach((gk, idx) => {
+                        const tab = roomsBar.querySelector(`[data-boardview="${gk}"]`);
+                        if (!tab) return;
+                        if (idx + 1 <= state.teamCount) tab.classList.remove('hidden');
+                        else tab.classList.add('hidden');
+                    });
+                } else {
+                    roomsBar.classList.add('hidden');
+                    roomsBar.classList.remove('flex');
+                }
+            }
+
+            document.querySelectorAll('.boardview-btn').forEach(btn => {
+                if (btn.dataset.boardview === state.teacherBoardView) {
+                    btn.classList.add('bg-indigo-600', 'text-white', 'ring-2', 'ring-indigo-300');
+                    btn.classList.remove('bg-slate-800');
+                } else {
+                    btn.classList.remove('bg-indigo-600', 'text-white', 'ring-2', 'ring-indigo-300');
+                    btn.classList.add('bg-slate-800');
+                }
+            });
+        }
+
+        function switchTeacherBoardView(viewKey) {
+            if (state.role !== 'teacher') return;
+            state.teacherBoardView = viewKey;
+            document.getElementById('cursors-layer').innerHTML = '';
+            updateGroupModeUI();
+            renderAllItems();
+            renderAllVectors();
+        }
+
+        function cycleStudentGroup(userId) {
+            if (state.role !== 'teacher' || state.teamCount === 0) return;
+            const student = connectedStudents[userId];
+            if (!student) return;
+            const current = student.group || 1;
+            student.group = (current % state.teamCount) + 1;
             updateParticipantsUI();
             broadcastState();
+            showToast(`${student.name} spostato nel Gruppo ${student.group}`, 'info');
+        }
+
+        function mergeGroupsIntoMainBoard() {
+            if (state.role !== 'teacher') return;
+            let copiedCount = 0;
+            const groupColors = { g1: 'yellow', g2: 'blue', g3: 'pink', g4: 'green' };
+            ['g1', 'g2', 'g3', 'g4'].forEach((gk, idx) => {
+                const gb = state.groupBoards[gk];
+                if (!gb) return;
+                gb.items.forEach(item => {
+                    if (!state.items.some(existing => existing.id === item.id)) {
+                        state.items.push({
+                            ...item,
+                            group: idx + 1,
+                            color: item.type === 'note' ? (groupColors[gk] || item.color) : item.color
+                        });
+                        copiedCount++;
+                    }
+                });
+                gb.vectors.forEach(vec => {
+                    if (!state.vectors.some(existing => existing.id === vec.id)) {
+                        state.vectors.push({ ...vec });
+                        copiedCount++;
+                    }
+                });
+            });
+            state.groupSpaceMode = 'shared';
+            state.teacherBoardView = 'main';
+            updateGroupModeUI();
+            renderAllItems();
+            renderAllVectors();
+            broadcastState();
+            showToast(
+                copiedCount > 0
+                    ? `Riuniti ${copiedCount} elementi dei gruppi nella Lavagna Comune!`
+                    : 'Tutti gli elementi sono già nella Lavagna Comune.',
+                'success'
+            );
         }
 
         function assignStudentGroup(studentId) {
@@ -3133,9 +3434,10 @@
             container.innerHTML = list.map(s => {
                 const gClass = s.group ? groupColors[s.group] : 'bg-slate-100 text-slate-700 border-slate-200';
                 const gLabel = s.group ? ` • Gr.${s.group}` : '';
+                const switchHint = (state.teamCount > 0 && s.group) ? `title="Clicca per cambiare gruppo a ${escapeHtml(s.name)}"` : '';
                 return `
                     <span class="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-lg border text-xs font-bold ${gClass}">
-                        <span>${escapeHtml(s.name)}${gLabel}</span>
+                        <span onclick="cycleStudentGroup('${s.userId}')" ${switchHint} class="${state.teamCount > 0 ? 'cursor-pointer hover:underline' : ''}">${escapeHtml(s.name)}${gLabel}</span>
                         <button type="button" onclick="kickStudent('${s.userId}')" title="Rimuovi ${escapeHtml(s.name)} dalla stanza"
                             class="w-4 h-4 rounded-md hover:bg-rose-600 hover:text-white text-slate-500 flex items-center justify-center transition-colors cursor-pointer font-black leading-none">
                             ×
@@ -3248,7 +3550,8 @@
         function updateBoardEmptyState() {
             const hint = document.getElementById('empty-board-hint');
             if (!hint) return;
-            const hasContent = state.items.length > 0 || state.vectors.length > 0 || state.template !== 'blank';
+            const store = getActiveBoardStore();
+            const hasContent = store.items.length > 0 || store.vectors.length > 0 || state.template !== 'blank';
             if (hasContent) hint.classList.add('hidden');
             else hint.classList.remove('hidden');
         }
@@ -3452,8 +3755,9 @@
 
         function resetBoardItems() {
             if (state.role !== 'teacher') return;
-            state.items = [];
-            state.vectors = [];
+            const store = getActiveBoardStore();
+            store.items = [];
+            store.vectors = [];
             renderAllItems();
             renderAllVectors();
             broadcastState();
