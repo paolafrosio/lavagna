@@ -1305,7 +1305,7 @@
                     : (msg.boardKey || 'main');
                 const store = getBoardStoreByKey(targetKey);
                 const item = store.items.find(n => n.id === msg.payload.id);
-                if (item && !item.lockedByTeacher) {
+                if (item && !item.lockedByTeacher && student && item.authorId === student.userId) {
                     item.x = msg.payload.x;
                     item.y = msg.payload.y;
                     item.zIndex = ++state.maxZIndex;
@@ -1320,7 +1320,7 @@
                     : (msg.boardKey || 'main');
                 const store = getBoardStoreByKey(targetKey);
                 const item = store.items.find(n => n.id === msg.payload.id);
-                if (item && !item.lockedByTeacher) {
+                if (item && !item.lockedByTeacher && student && item.authorId === student.userId) {
                     item.width = msg.payload.width;
                     if (msg.payload.height) item.height = msg.payload.height;
                     if (getActiveBoardKey() === targetKey) renderSingleItem(item);
@@ -1334,7 +1334,7 @@
                     : (msg.boardKey || 'main');
                 const store = getBoardStoreByKey(targetKey);
                 const item = store.items.find(n => n.id === msg.payload.id);
-                if (item && !item.lockedByTeacher) {
+                if (item && !item.lockedByTeacher && student && item.authorId === student.userId) {
                     item.rotation = msg.payload.rotation || 0;
                     if (getActiveBoardKey() === targetKey) renderSingleItem(item);
                     broadcastState();
@@ -1347,7 +1347,7 @@
                     : (msg.boardKey || 'main');
                 const store = getBoardStoreByKey(targetKey);
                 const item = store.items.find(n => n.id === msg.payload.id);
-                if (item && !item.lockedByTeacher) {
+                if (item && !item.lockedByTeacher && student && item.authorId === student.userId) {
                     item.text = msg.payload.text;
                     if (msg.payload.color) item.color = msg.payload.color;
                     if (getActiveBoardKey() === targetKey) renderSingleItem(item);
@@ -1361,7 +1361,7 @@
                     : (msg.boardKey || 'main');
                 const store = getBoardStoreByKey(targetKey);
                 const targetItem = store.items.find(n => n.id === msg.payload);
-                if (!targetItem || targetItem.lockedByTeacher) return;
+                if (!targetItem || targetItem.lockedByTeacher || !student || targetItem.authorId !== student.userId) return;
                 store.items = store.items.filter(n => n.id !== msg.payload);
                 if (getActiveBoardKey() === targetKey) {
                     const el = document.getElementById(msg.payload);
@@ -1407,7 +1407,7 @@
                     : (msg.boardKey || 'main');
                 const store = getBoardStoreByKey(targetKey);
                 const targetVec = store.vectors.find(v => v.id === msg.payload);
-                if (!targetVec || targetVec.lockedByTeacher) return;
+                if (!targetVec || targetVec.lockedByTeacher || !student || targetVec.authorId !== student.userId) return;
                 store.vectors = store.vectors.filter(v => v.id !== msg.payload);
                 if (getActiveBoardKey() === targetKey) renderAllVectors();
                 broadcastState();
@@ -1419,7 +1419,7 @@
                     : (msg.boardKey || 'main');
                 const store = getBoardStoreByKey(targetKey);
                 const vec = store.vectors.find(v => v.id === msg.payload.id);
-                if (vec && !vec.lockedByTeacher) {
+                if (vec && !vec.lockedByTeacher && student && vec.authorId === student.userId) {
                     if (vec.type === 'pen' && Array.isArray(msg.payload.points)) {
                         vec.points = msg.payload.points;
                     } else {
@@ -1831,6 +1831,7 @@
             const activeVectors = getActiveBoardStore().vectors;
 
             for (const vec of activeVectors) {
+                if (state.role !== 'teacher' && (vec.lockedByTeacher || vec.authorId !== state.userId)) continue;
                 let hit = false;
                 if (vec.type === 'pen' && Array.isArray(vec.points)) {
                     for (let i = 0; i < vec.points.length - 1; i++) {
@@ -2223,7 +2224,7 @@
             const activeVectors = getActiveBoardStore().vectors;
 
             activeVectors.forEach((vec, index) => {
-                const isProtectedFromStudent = state.role !== 'teacher' && Boolean(vec.lockedByTeacher);
+                const isProtectedFromStudent = state.role !== 'teacher' && (Boolean(vec.lockedByTeacher) || vec.authorId !== state.userId);
                 if (isProtectedFromStudent) return;
 
                 let minX = 0, minY = 0, maxX = 0, maxY = 0;
@@ -2506,7 +2507,7 @@
             const store = getActiveBoardStore();
             const targetVec = store.vectors.find(v => v.id === id);
             if (!targetVec) return;
-            if (state.role !== 'teacher' && targetVec.lockedByTeacher) return;
+            if (state.role !== 'teacher' && (targetVec.lockedByTeacher || targetVec.authorId !== state.userId)) return;
 
             const prevLen = store.vectors.length;
             store.vectors = store.vectors.filter(v => v.id !== id);
@@ -2536,18 +2537,27 @@
             const store = getActiveBoardStore();
             if (store.vectors.length === 0) return;
 
-            const ids = store.vectors.map(v => v.id);
-            store.vectors = [];
+            if (state.role === 'teacher') {
+                store.vectors = [];
+                renderAllVectors();
+                updateBoardEmptyState();
+                broadcastState();
+                showToast('Tutti i disegni sono stati cancellati.', 'info');
+                return;
+            }
+
+            const ownedVectors = store.vectors.filter(v => !v.lockedByTeacher && v.authorId === state.userId);
+            if (ownedVectors.length === 0) {
+                showToast('Non ci sono tuoi disegni da cancellare.', 'info');
+                return;
+            }
+            const ids = ownedVectors.map(v => v.id);
+            store.vectors = store.vectors.filter(v => v.lockedByTeacher || v.authorId !== state.userId);
             renderAllVectors();
             updateBoardEmptyState();
-
-            if (state.role === 'teacher') {
-                broadcastState();
-            } else {
-                const bk = getActiveBoardKey();
-                ids.forEach(id => sendToHost({ type: 'DELETE_VECTOR', boardKey: bk, payload: id }));
-            }
-            showToast('Tutti i disegni sono stati cancellati.', 'info');
+            const bk = getActiveBoardKey();
+            ids.forEach(id => sendToHost({ type: 'DELETE_VECTOR', boardKey: bk, payload: id }));
+            showToast('I tuoi disegni sono stati cancellati.', 'info');
         }
 
         function selectNoteColor(color) {
@@ -2670,9 +2680,9 @@
             if (existing) existing.remove();
 
             const isOwner = item.authorId === state.userId;
-            const isProtected = state.role !== 'teacher' && Boolean(item.lockedByTeacher);
-            const canMove = state.role === 'teacher' || (!state.isFrozen && !isProtected);
-            const canEditOrDelete = state.role === 'teacher' || (isOwner && !state.isFrozen && !isProtected);
+            const isProtected = state.role !== 'teacher' && (Boolean(item.lockedByTeacher) || !isOwner);
+            const canMove = state.role === 'teacher' || (!state.isFrozen && isOwner && !item.lockedByTeacher);
+            const canEditOrDelete = state.role === 'teacher' || (isOwner && !state.isFrozen && !item.lockedByTeacher);
 
             if (item.type === 'text') {
                 const sizeClasses = {
