@@ -2727,6 +2727,7 @@
                 return;
             }
             const url = new URL(window.location.href);
+            url.searchParams.delete('docente');
             url.searchParams.set('room', state.roomCode);
             const shareUrl = url.toString();
 
