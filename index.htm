@@ -1304,10 +1304,13 @@
                 broadcastState();
             } else if (msg.type === 'ADD_ITEM') {
                 if (state.isFrozen) return;
-                const student = Object.values(connectedStudents).find(s => s.peerId === conn.peer);
-                const targetKey = (state.teamCount > 0 && state.groupSpaceMode === 'separate' && student && student.group)
-                    ? ('g' + student.group)
+                const student = Object.values(connectedStudents).find(s => s.peerId === conn.peer)
+                    || (msg.payload && msg.payload.authorId ? connectedStudents[msg.payload.authorId] : null);
+                const resolvedGroup = (student && student.group) ? student.group : (msg.payload && msg.payload.group ? msg.payload.group : null);
+                const targetKey = (state.teamCount > 0 && state.groupSpaceMode === 'separate' && resolvedGroup)
+                    ? ('g' + resolvedGroup)
                     : (msg.boardKey || 'main');
+                if (resolvedGroup && msg.payload) msg.payload.group = resolvedGroup;
                 const store = getBoardStoreByKey(targetKey);
                 store.items.push(msg.payload);
                 if (getActiveBoardKey() === targetKey) {
@@ -1406,9 +1409,11 @@
                 }
             } else if (msg.type === 'ADD_VECTOR') {
                 if (state.isFrozen) return;
-                const student = Object.values(connectedStudents).find(s => s.peerId === conn.peer);
-                const targetKey = (state.teamCount > 0 && state.groupSpaceMode === 'separate' && student && student.group)
-                    ? ('g' + student.group)
+                const student = Object.values(connectedStudents).find(s => s.peerId === conn.peer)
+                    || (msg.payload && msg.payload.authorId ? connectedStudents[msg.payload.authorId] : null);
+                const resolvedGroup = (student && student.group) ? student.group : null;
+                const targetKey = (state.teamCount > 0 && state.groupSpaceMode === 'separate' && resolvedGroup)
+                    ? ('g' + resolvedGroup)
                     : (msg.boardKey || 'main');
                 const store = getBoardStoreByKey(targetKey);
                 store.vectors.push(msg.payload);
@@ -3283,6 +3288,37 @@
         }
 
         // ---------------- MODALITÀ SQUADRE ----------------
+        function applyGroupZonesTemplate(count) {
+            if (count === 2) {
+                state.template = 'cols2';
+                state.sectionTitles.col1 = '🟡 Gruppo 1 • Giallo';
+                state.sectionTitles.col2 = '🔵 Gruppo 2 • Azzurro';
+                state.sectionColors.col1 = 'amber';
+                state.sectionColors.col2 = 'sky';
+            } else if (count === 3) {
+                state.template = 'kanban';
+                state.sectionTitles.col1 = '🟡 Gruppo 1 • Giallo';
+                state.sectionTitles.col2 = '🔵 Gruppo 2 • Azzurro';
+                state.sectionTitles.col3 = '🔴 Gruppo 3 • Rosa';
+                state.sectionColors.col1 = 'amber';
+                state.sectionColors.col2 = 'sky';
+                state.sectionColors.col3 = 'rose';
+            } else if (count === 4) {
+                state.template = 'quadrants';
+                state.sectionTitles.q1 = '🟡 Gruppo 1 • Giallo';
+                state.sectionTitles.q2 = '🔵 Gruppo 2 • Azzurro';
+                state.sectionTitles.q3 = '🔴 Gruppo 3 • Rosa';
+                state.sectionTitles.q4 = '🟢 Gruppo 4 • Verde';
+                state.sectionColors.q1 = 'amber';
+                state.sectionColors.q2 = 'sky';
+                state.sectionColors.q3 = 'rose';
+                state.sectionColors.q4 = 'emerald';
+            } else {
+                state.template = 'blank';
+            }
+            applyTemplateUI();
+        }
+
         function setTeamCount(count) {
             if (state.role !== 'teacher') return;
             state.teamCount = count;
@@ -3300,12 +3336,14 @@
                     connectedStudents[uid].group = null;
                 });
                 state.teacherBoardView = 'main';
+                applyGroupZonesTemplate(0);
                 showToast('Modalità squadre disattivata.', 'info');
             } else {
                 const studentIds = Object.keys(connectedStudents);
                 studentIds.forEach((uid, index) => {
                     connectedStudents[uid].group = (index % count) + 1;
                 });
+                applyGroupZonesTemplate(count);
                 showToast(`Classe divisa in ${count} squadre!`, 'success');
             }
 
@@ -3416,31 +3454,7 @@
             const headerOffset = 68;
 
             // 1. Imposta automaticamente il layout a 2, 3 o 4 riquadri colorati sulla Lavagna Comune
-            if (activeGroups === 2) {
-                state.template = 'cols2';
-                state.sectionTitles.col1 = '🟡 Gruppo 1 • Giallo';
-                state.sectionTitles.col2 = '🔵 Gruppo 2 • Azzurro';
-                state.sectionColors.col1 = 'amber';
-                state.sectionColors.col2 = 'sky';
-            } else if (activeGroups === 3) {
-                state.template = 'kanban';
-                state.sectionTitles.col1 = '🟡 Gruppo 1 • Giallo';
-                state.sectionTitles.col2 = '🔵 Gruppo 2 • Azzurro';
-                state.sectionTitles.col3 = '🔴 Gruppo 3 • Rosa';
-                state.sectionColors.col1 = 'amber';
-                state.sectionColors.col2 = 'sky';
-                state.sectionColors.col3 = 'rose';
-            } else {
-                state.template = 'quadrants';
-                state.sectionTitles.q1 = '🟡 Gruppo 1 • Giallo';
-                state.sectionTitles.q2 = '🔵 Gruppo 2 • Azzurro';
-                state.sectionTitles.q3 = '🔴 Gruppo 3 • Rosa';
-                state.sectionTitles.q4 = '🟢 Gruppo 4 • Verde';
-                state.sectionColors.q1 = 'amber';
-                state.sectionColors.q2 = 'sky';
-                state.sectionColors.q3 = 'rose';
-                state.sectionColors.q4 = 'emerald';
-            }
+            applyGroupZonesTemplate(activeGroups);
 
             // Calcola i rettangoli di destinazione per ciascun gruppo
             const getZoneRect = (idx) => {
