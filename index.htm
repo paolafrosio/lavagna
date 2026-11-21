@@ -91,10 +91,10 @@
                             <span class="text-[11px] font-normal text-indigo-500 mt-0.5">Entra con codice</span>
                         </button>
                         <button type="button" id="btn-role-teacher" onclick="selectRole('teacher')"
-                            class="hidden flex-col items-center justify-center p-4 rounded-2xl border-2 border-slate-200 hover:border-indigo-300 text-slate-600 font-bold transition-all cursor-pointer">
+                            class="flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-slate-200 hover:border-indigo-300 text-slate-600 font-bold transition-all cursor-pointer">
                             <i data-lucide="presentation" class="w-6 h-6 mb-1.5"></i>
                             <span>Docente (LIM)</span>
-                            <span class="text-[11px] font-normal text-slate-400 mt-0.5">Area riservata</span>
+                            <span class="text-[11px] font-normal text-slate-400 mt-0.5">Crea stanza</span>
                         </button>
                     </div>
                 </div>
@@ -135,12 +135,6 @@
                     <span>Entra nella Lavagna</span>
                     <i data-lucide="arrow-right" class="w-5 h-5"></i>
                 </button>
-                <div class="text-center pt-1">
-                    <button type="button" id="btn-show-teacher-login" onclick="unlockTeacherLogin()"
-                        class="text-[11px] font-semibold text-slate-400 hover:text-indigo-600 transition-colors cursor-pointer">
-                        Sei il docente? Attiva ingresso LIM
-                    </button>
-                </div>
             </div>
         </div>
     </div>
@@ -869,12 +863,10 @@
 
         function unlockTeacherLogin() {
             const btnTeacher = document.getElementById('btn-role-teacher');
-            const hintBtn = document.getElementById('btn-show-teacher-login');
             if (btnTeacher) {
                 btnTeacher.classList.remove('hidden');
                 btnTeacher.classList.add('flex');
             }
-            if (hintBtn) hintBtn.classList.add('hidden');
             selectRole('teacher');
             const pinInput = document.getElementById('input-teacher-pin');
             if (pinInput) pinInput.focus();
@@ -4481,9 +4473,17 @@
                 selectRole('student');
             }
             const docenteParam = params.get('docente');
-            if (docenteParam === '1' || docenteParam === 'cpia2025') {
-                if (docenteParam === 'cpia2025') hasTeacherUrlKey = true;
+            if (docenteParam) {
+                if (docenteParam.toUpperCase() === 'LIM2026' || docenteParam === 'cpia2025') {
+                    hasTeacherUrlKey = true;
+                    const pinField = document.getElementById('teacher-pin-field');
+                    if (pinField) pinField.classList.add('hidden');
+                }
                 unlockTeacherLogin();
+                if (hasTeacherUrlKey) {
+                    const pinField = document.getElementById('teacher-pin-field');
+                    if (pinField) pinField.classList.add('hidden');
+                }
             }
         });
     </script>
