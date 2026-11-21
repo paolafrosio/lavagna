@@ -1178,39 +1178,45 @@
         function getGroupZoneBounds(groupNum, totalGroups) {
             const count = Math.max(2, Math.min(4, totalGroups || 2));
             const idx = Math.max(0, Math.min(count - 1, (groupNum || 1) - 1));
-            const boardW = 1600;
-            const boardH = 980;
-            const padX = 48;
-            const padTop = 95;
-            const gap = 28;
-            const headerOffset = 68;
+            // Dimensioni reali del #board-canvas (3000 x 2000 px) con padding p-8 (32px), pt-20 (80px) e gap-6 (24px)
+            const boardW = 3000;
+            const boardH = 2000;
+            const padX = 32;
+            const padTop = 80;
+            const padBottom = 32;
+            const gap = 24;
+            const headerOffset = 72;
 
             if (count === 2 || count === 3) {
                 const colW = (boardW - padX * 2 - gap * (count - 1)) / count;
+                const colH = boardH - padTop - padBottom;
+                const x = Math.round(padX + idx * (colW + gap));
                 return {
-                    x: Math.round(padX + idx * (colW + gap)),
+                    x,
                     y: padTop,
                     w: Math.round(colW),
-                    h: boardH - padTop - 24,
-                    innerX: Math.round(padX + idx * (colW + gap) + 18),
+                    h: Math.round(colH),
+                    innerX: x + 20,
                     innerY: padTop + headerOffset,
-                    innerW: Math.max(220, Math.round(colW - 36)),
-                    innerH: Math.max(300, boardH - padTop - headerOffset - 40)
+                    innerW: Math.max(240, Math.round(colW - 40)),
+                    innerH: Math.max(300, Math.round(colH - headerOffset - 24))
                 };
             }
             const cellW = (boardW - padX * 2 - gap) / 2;
-            const cellH = (boardH - padTop - gap - 32) / 2;
+            const cellH = (boardH - padTop - padBottom - gap) / 2;
             const col = idx % 2;
             const row = Math.floor(idx / 2);
+            const x = Math.round(padX + col * (cellW + gap));
+            const y = Math.round(padTop + row * (cellH + gap));
             return {
-                x: Math.round(padX + col * (cellW + gap)),
-                y: Math.round(padTop + row * (cellH + gap)),
+                x,
+                y,
                 w: Math.round(cellW),
                 h: Math.round(cellH),
-                innerX: Math.round(padX + col * (cellW + gap) + 18),
-                innerY: Math.round(padTop + row * (cellH + gap) + headerOffset),
-                innerW: Math.max(240, Math.round(cellW - 36)),
-                innerH: Math.max(220, Math.round(cellH - headerOffset - 24))
+                innerX: x + 20,
+                innerY: y + headerOffset,
+                innerW: Math.max(240, Math.round(cellW - 40)),
+                innerH: Math.max(240, Math.round(cellH - headerOffset - 24))
             };
         }
 
@@ -1218,19 +1224,19 @@
             if (state.role === 'teacher' || state.teamCount <= 0 || !state.myGroup) {
                 return { x, y };
             }
-            // In "Stanze Separate" usa tutta l'area della propria stanza (0..1600 x 0..980)
+            // In "Stanze Separate" usa tutta l'area della propria stanza (3000 x 2000)
             if (state.groupSpaceMode === 'separate') {
                 return {
-                    x: Math.max(24, Math.min(1600 - Math.max(40, itemW), x)),
-                    y: Math.max(24, Math.min(980 - Math.max(40, itemH), y))
+                    x: Math.max(44, Math.min(3000 - Math.max(40, itemW) - 44, x)),
+                    y: Math.max(140, Math.min(2000 - Math.max(40, itemH) - 44, y))
                 };
             }
-            // In "Lavagna Unica" confina lo studente esclusivamente dentro il riquadro del proprio colore
+            // In "Lavagna Unica" confina lo studente esclusivamente dentro tutto il riquadro del proprio colore
             const z = getGroupZoneBounds(state.myGroup, state.teamCount);
-            const maxX = Math.max(z.innerX, z.x + z.w - Math.max(40, itemW) - 12);
-            const maxY = Math.max(z.innerY, z.y + z.h - Math.max(40, itemH) - 12);
+            const maxX = Math.max(z.innerX, z.x + z.w - Math.max(40, itemW) - 16);
+            const maxY = Math.max(z.innerY, z.y + z.h - Math.max(40, itemH) - 16);
             return {
-                x: Math.max(z.x + 12, Math.min(maxX, x)),
+                x: Math.max(z.x + 16, Math.min(maxX, x)),
                 y: Math.max(z.innerY, Math.min(maxY, y))
             };
         }
@@ -1279,9 +1285,10 @@
                 const student = Object.values(connectedStudents).find(s => s.peerId === conn.peer)
                     || (msg.payload && msg.payload.authorId ? connectedStudents[msg.payload.authorId] : null);
                 const resolvedGroup = (student && student.group) ? student.group : (msg.payload && msg.payload.group ? msg.payload.group : null);
-                const targetKey = (state.teamCount > 0 && state.groupSpaceMode === 'separate' && resolvedGroup)
+                if (state.teamCount > 0 && state.groupSpaceMode === 'separate' && !resolvedGroup) return;
+                const targetKey = (state.teamCount > 0 && state.groupSpaceMode === 'separate')
                     ? ('g' + resolvedGroup)
-                    : (msg.boardKey || 'main');
+                    : 'main';
                 if (resolvedGroup && msg.payload) msg.payload.group = resolvedGroup;
                 const store = getBoardStoreByKey(targetKey);
                 store.items.push(msg.payload);
@@ -1383,10 +1390,11 @@
                 if (state.isFrozen) return;
                 const student = Object.values(connectedStudents).find(s => s.peerId === conn.peer)
                     || (msg.payload && msg.payload.authorId ? connectedStudents[msg.payload.authorId] : null);
-                const resolvedGroup = (student && student.group) ? student.group : null;
-                const targetKey = (state.teamCount > 0 && state.groupSpaceMode === 'separate' && resolvedGroup)
+                const resolvedGroup = (student && student.group) ? student.group : (msg.payload && msg.payload.group ? msg.payload.group : null);
+                if (state.teamCount > 0 && state.groupSpaceMode === 'separate' && !resolvedGroup) return;
+                const targetKey = (state.teamCount > 0 && state.groupSpaceMode === 'separate')
                     ? ('g' + resolvedGroup)
-                    : (msg.boardKey || 'main');
+                    : 'main';
                 const store = getBoardStoreByKey(targetKey);
                 store.vectors.push(msg.payload);
                 if (getActiveBoardKey() === targetKey) renderAllVectors();
@@ -2023,6 +2031,7 @@
                 if (isValid) {
                     const createdType = currentVector.type;
                     const activeBoardKey = getActiveBoardKey();
+                    currentVector.group = state.myGroup || null;
                     getActiveBoardStore().vectors.push(currentVector);
                     sendToHost({ type: 'ADD_VECTOR', boardKey: activeBoardKey, payload: currentVector });
                     if (state.role === 'teacher') broadcastState();
