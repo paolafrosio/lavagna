@@ -83,32 +83,38 @@
             <div class="p-6 space-y-5">
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">1. Chi sta entrando?</label>
-                    <div class="grid grid-cols-2 gap-3">
-                        <button type="button" id="btn-role-teacher" onclick="selectRole('teacher')"
-                            class="flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-indigo-600 bg-indigo-50 text-indigo-700 font-bold transition-all cursor-pointer">
-                            <i data-lucide="presentation" class="w-6 h-6 mb-1.5"></i>
-                            <span>Docente (LIM)</span>
-                            <span class="text-[11px] font-normal text-indigo-500 mt-0.5">Crea la stanza</span>
-                        </button>
+                    <div class="grid grid-cols-2 gap-3" id="role-selector-grid">
                         <button type="button" id="btn-role-student" onclick="selectRole('student')"
-                            class="flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-slate-200 hover:border-indigo-300 text-slate-600 font-bold transition-all cursor-pointer">
+                            class="flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-indigo-600 bg-indigo-50 text-indigo-700 font-bold transition-all cursor-pointer">
                             <i data-lucide="smartphone" class="w-6 h-6 mb-1.5"></i>
                             <span>Studente</span>
-                            <span class="text-[11px] font-normal text-slate-400 mt-0.5">Entra con codice</span>
+                            <span class="text-[11px] font-normal text-indigo-500 mt-0.5">Entra con codice</span>
+                        </button>
+                        <button type="button" id="btn-role-teacher" onclick="selectRole('teacher')"
+                            class="hidden flex-col items-center justify-center p-4 rounded-2xl border-2 border-slate-200 hover:border-indigo-300 text-slate-600 font-bold transition-all cursor-pointer">
+                            <i data-lucide="presentation" class="w-6 h-6 mb-1.5"></i>
+                            <span>Docente (LIM)</span>
+                            <span class="text-[11px] font-normal text-slate-400 mt-0.5">Area riservata</span>
                         </button>
                     </div>
                 </div>
 
                 <div>
                     <label for="input-user-name" class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">2. Il tuo nome</label>
-                    <input type="text" id="input-user-name" placeholder="Es. Prof.ssa Rossi oppure Amina"
+                    <input type="text" id="input-user-name" placeholder="Es. Amina oppure Prof.ssa Rossi"
                         class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none text-slate-800 font-medium">
                 </div>
 
-                <div id="student-room-field" class="hidden">
+                <div id="student-room-field">
                     <label for="input-room-code" class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">3. Codice della Stanza (mostrato sulla LIM)</label>
                     <input type="text" id="input-room-code" placeholder="Es. CPIA-482" maxlength="12"
                         class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none text-slate-800 font-bold uppercase tracking-widest">
+                </div>
+
+                <div id="teacher-pin-field" class="hidden">
+                    <label for="input-teacher-pin" class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">3. PIN Docente (per creare una nuova stanza)</label>
+                    <input type="password" id="input-teacher-pin" inputmode="numeric" placeholder="Inserisci PIN docente" maxlength="10"
+                        class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none text-slate-800 font-bold tracking-widest">
                 </div>
 
                 <button type="button" onclick="enterBoard()"
@@ -622,9 +628,15 @@
     <div id="toast-box" class="fixed top-16 right-4 z-50 pointer-events-none flex flex-col gap-2"></div>
 
     <script>
+        // Impronta crittografica SHA-256 del PIN docente (nessuna password in chiaro nel codice!)
+        const TEACHER_PIN_HASH = '1216985755422923295965745208106205212606761775933349014658365134';
+        let pinAttempts = 0;
+        let pinLockedUntil = 0;
+        let hasTeacherUrlKey = false;
+
         // ---------------- STATO GLOBALE DELL'APPLICAZIONE ----------------
         const state = {
-            role: 'teacher',
+            role: 'student',
             userName: '',
             userId: 'user-' + Math.random().toString(36).substring(2, 9),
             roomCode: '',
@@ -689,39 +701,15 @@
             rose:    { bg: 'bg-rose-50/80',    border: 'border-rose-300',    header: 'bg-rose-100 text-rose-900' },
             orange:  { bg: 'bg-orange-50/80',  border: 'border-orange-300',  header: 'bg-orange-100 text-orange-900' },
             amber:   { bg: 'bg-amber-50/80',   border: 'border-amber-300',   header: 'bg-amber-100 text-amber-900' },
-            slate:   { bg: 'bg-slate-100/80',  border: 'border-slate-300',   header: 'bg-slate-200 text-slate-900' }
+            slate:   { bg: 'bg-slate-50/80',   border: 'border-slate-300',   header: 'bg-slate-200 text-slate-900' }
         };
 
-        let peer = null;
-        let hostConnection = null;
-        const studentConnections = {};
-        const connectedStudents = {};
-        let editingNoteId = null;
-        let editingSectionKey = null;
-        let selectedSectionColor = 'slate';
-        let timerInterval = null;
-        let isDrawingVector = false;
-        let currentVector = null;
-        let isErasing = false;
-        let lastCursorSentAt = 0;
-
-        const CURSOR_COLORS = [
-            { hex: '#e11d48', bg: 'bg-rose-600' },
-            { hex: '#0284c7', bg: 'bg-sky-600' },
-            { hex: '#059669', bg: 'bg-emerald-600' },
-            { hex: '#d97706', bg: 'bg-amber-600' },
-            { hex: '#7c3aed', bg: 'bg-violet-600' },
-            { hex: '#db2777', bg: 'bg-pink-600' },
-            { hex: '#0d9488', bg: 'bg-teal-600' },
-            { hex: '#ea580c', bg: 'bg-orange-600' }
-        ];
-
         const NOTE_STYLES = {
-            yellow: { bg: 'bg-amber-200', border: 'border-amber-300', text: 'text-amber-950', badge: 'bg-amber-500' },
-            blue:   { bg: 'bg-sky-200',   border: 'border-sky-300',   text: 'text-sky-950',   badge: 'bg-sky-500' },
-            pink:   { bg: 'bg-rose-200',  border: 'border-rose-300',  text: 'text-rose-950',  badge: 'bg-rose-500' },
-            green:  { bg: 'bg-emerald-200', border: 'border-emerald-300', text: 'text-emerald-950', badge: 'bg-emerald-500' },
-            purple: { bg: 'bg-purple-200', border: 'border-purple-300', text: 'text-purple-950', badge: 'bg-purple-500' }
+            yellow: { bg: 'bg-amber-100', border: 'border-amber-300', text: 'text-amber-950', badge: 'bg-amber-500' },
+            blue:   { bg: 'bg-sky-100',   border: 'border-sky-300',   text: 'text-sky-950',   badge: 'bg-sky-500' },
+            pink:   { bg: 'bg-rose-100',  border: 'border-rose-300',  text: 'text-rose-950',  badge: 'bg-rose-500' },
+            green:  { bg: 'bg-emerald-100', border: 'border-emerald-300', text: 'text-emerald-950', badge: 'bg-emerald-500' },
+            purple: { bg: 'bg-purple-100', border: 'border-purple-300', text: 'text-purple-950', badge: 'bg-purple-500' }
         };
 
         const STROKE_HEX = {
@@ -731,10 +719,49 @@
             slate: '#334155'
         };
 
-        // Controllo parametri URL (?room=CPIA-123)
+        const CURSOR_COLORS = [
+            { hex: '#e11d48', bg: 'bg-rose-600' },
+            { hex: '#0284c7', bg: 'bg-sky-600' },
+            { hex: '#059669', bg: 'bg-emerald-600' },
+            { hex: '#d97706', bg: 'bg-amber-600' },
+            { hex: '#7c3aed', bg: 'bg-violet-600' },
+            { hex: '#db2777', bg: 'bg-pink-600' },
+            { hex: '#0d9488', bg: 'bg-teal-600' }
+        ];
+
+        let peer = null;
+        let hostConnection = null;
+        let studentConnections = {};
+        let connectedStudents = {};
+        let editingNoteId = null;
+        let editingSectionKey = null;
+        let selectedSectionColor = 'slate';
+        let timerInterval = null;
+        let isDrawingVector = false;
+        let isErasing = false;
+        let currentVector = null;
+        let lastCursorSentAt = 0;
+
+        // Controllo parametri URL (?room=CPIA-123 oppure ?docente=CHIAVE)
         window.addEventListener('DOMContentLoaded', () => {
             const params = new URLSearchParams(window.location.search);
             const roomParam = params.get('room');
+            const teacherParam = params.get('docente');
+            const roleGrid = document.getElementById('role-selector-grid');
+            const btnTeacher = document.getElementById('btn-role-teacher');
+
+            if (teacherParam && teacherParam.trim().length >= 4) {
+                hasTeacherUrlKey = true;
+                btnTeacher.classList.remove('hidden');
+                btnTeacher.classList.add('flex');
+                selectRole('teacher');
+            } else {
+                // Senza il parametro ?docente=... nell'URL, gli studenti vedono SOLO l'accesso Studente
+                roleGrid.classList.remove('grid-cols-2');
+                roleGrid.classList.add('grid-cols-1');
+                selectRole('student');
+            }
+
             if (roomParam) {
                 selectRole('student');
                 document.getElementById('input-room-code').value = roomParam.toUpperCase();
@@ -742,21 +769,37 @@
             lucide.createIcons();
         });
 
+        async function sha256Hex(message) {
+            const msgBuffer = new TextEncoder().encode(message);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
         // ---------------- ACCESSO E RUOLI ----------------
         function selectRole(role) {
             state.role = role;
             const btnTeacher = document.getElementById('btn-role-teacher');
             const btnStudent = document.getElementById('btn-role-student');
             const roomField = document.getElementById('student-room-field');
+            const pinField = document.getElementById('teacher-pin-field');
 
             if (role === 'teacher') {
                 btnTeacher.className = 'flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-indigo-600 bg-indigo-50 text-indigo-700 font-bold transition-all cursor-pointer';
                 btnStudent.className = 'flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-slate-200 hover:border-indigo-300 text-slate-600 font-bold transition-all cursor-pointer';
                 roomField.classList.add('hidden');
+                if (hasTeacherUrlKey) {
+                    pinField.classList.add('hidden');
+                } else {
+                    pinField.classList.remove('hidden');
+                }
             } else {
                 btnStudent.className = 'flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-indigo-600 bg-indigo-50 text-indigo-700 font-bold transition-all cursor-pointer';
-                btnTeacher.className = 'flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-slate-200 hover:border-indigo-300 text-slate-600 font-bold transition-all cursor-pointer';
+                if (!btnTeacher.classList.contains('hidden')) {
+                    btnTeacher.className = 'flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-slate-200 hover:border-indigo-300 text-slate-600 font-bold transition-all cursor-pointer';
+                }
                 roomField.classList.remove('hidden');
+                pinField.classList.add('hidden');
             }
         }
 
@@ -765,7 +808,7 @@
             return `CPIA-${num}`;
         }
 
-        function enterBoard() {
+        async function enterBoard() {
             const nameInput = document.getElementById('input-user-name').value.trim();
             if (!nameInput) {
                 showToast('Inserisci il tuo nome prima di entrare!', 'error');
@@ -774,6 +817,26 @@
             state.userName = nameInput;
 
             if (state.role === 'teacher') {
+                if (!hasTeacherUrlKey) {
+                    if (Date.now() < pinLockedUntil) {
+                        const secLeft = Math.ceil((pinLockedUntil - Date.now()) / 1000);
+                        showToast(`Troppi tentativi errati. Riprova tra ${secLeft}s.`, 'error');
+                        return;
+                    }
+                    const pinInput = document.getElementById('input-teacher-pin').value.trim();
+                    const inputHash = await sha256Hex(pinInput);
+                    if (inputHash !== TEACHER_PIN_HASH) {
+                        pinAttempts++;
+                        if (pinAttempts >= 3) {
+                            pinLockedUntil = Date.now() + 60000;
+                            pinAttempts = 0;
+                            showToast('Accesso docente bloccato per 60 secondi.', 'error');
+                        } else {
+                            showToast('PIN Docente errato!', 'error');
+                        }
+                        return;
+                    }
+                }
                 state.roomCode = generateRoomCode();
                 setupTeacherUI();
                 initPeerHost();
@@ -2747,28 +2810,6 @@
                 banner.classList.add('hidden');
             }
             lucide.createIcons();
-        }
-
-        function updateFreezeUI() {
-            const btn = document.getElementById('freeze-btn');
-            const label = document.getElementById('freeze-label');
-            const banner = document.getElementById('frozen-banner');
-
-            if (state.isFrozen) {
-                if (btn) {
-                    btn.classList.remove('bg-slate-100', 'text-slate-700');
-                    btn.classList.add('bg-amber-500', 'text-white');
-                }
-                if (label) label.textContent = 'Sblocca';
-                if (state.role === 'student') banner.classList.remove('hidden');
-            } else {
-                if (btn) {
-                    btn.classList.remove('bg-amber-500', 'text-white');
-                    btn.classList.add('bg-slate-100', 'text-slate-700');
-                }
-                if (label) label.textContent = 'Blocca';
-                banner.classList.add('hidden');
-            }
         }
 
         // ---------------- TIMER CLASSE ----------------
