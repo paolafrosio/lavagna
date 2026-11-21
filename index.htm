@@ -3136,6 +3136,17 @@
                         </div>
                     </div>
                 `;
+            } else if (state.template === 'cols2') {
+                bgLayer.innerHTML = `
+                    <div class="grid grid-cols-2 gap-6 h-full p-8 pt-20">
+                        <div class="${getBoxClasses('col1', 'amber')} border-2 rounded-3xl p-5 flex flex-col">
+                            ${renderHeader('col1', 'amber')}
+                        </div>
+                        <div class="${getBoxClasses('col2', 'sky')} border-2 rounded-3xl p-5 flex flex-col">
+                            ${renderHeader('col2', 'sky')}
+                        </div>
+                    </div>
+                `;
             }
             lucide.createIcons();
         }
@@ -3271,38 +3282,161 @@
 
         function mergeGroupsIntoMainBoard() {
             if (state.role !== 'teacher') return;
-            let copiedCount = 0;
+
+            const activeGroups = Math.max(2, Math.min(4, state.teamCount || 2));
             const groupColors = { g1: 'yellow', g2: 'blue', g3: 'pink', g4: 'green' };
-            ['g1', 'g2', 'g3', 'g4'].forEach((gk, idx) => {
+            const boardW = 1600;
+            const boardH = 980;
+            const padX = 48;
+            const padTop = 95;
+            const gap = 28;
+            const headerOffset = 68;
+
+            // 1. Imposta automaticamente il layout a 2, 3 o 4 riquadri colorati sulla Lavagna Comune
+            if (activeGroups === 2) {
+                state.template = 'cols2';
+                state.sectionTitles.col1 = '🟡 Gruppo 1 • Giallo';
+                state.sectionTitles.col2 = '🔵 Gruppo 2 • Azzurro';
+                state.sectionColors.col1 = 'amber';
+                state.sectionColors.col2 = 'sky';
+            } else if (activeGroups === 3) {
+                state.template = 'kanban';
+                state.sectionTitles.col1 = '🟡 Gruppo 1 • Giallo';
+                state.sectionTitles.col2 = '🔵 Gruppo 2 • Azzurro';
+                state.sectionTitles.col3 = '🔴 Gruppo 3 • Rosa';
+                state.sectionColors.col1 = 'amber';
+                state.sectionColors.col2 = 'sky';
+                state.sectionColors.col3 = 'rose';
+            } else {
+                state.template = 'quadrants';
+                state.sectionTitles.q1 = '🟡 Gruppo 1 • Giallo';
+                state.sectionTitles.q2 = '🔵 Gruppo 2 • Azzurro';
+                state.sectionTitles.q3 = '🔴 Gruppo 3 • Rosa';
+                state.sectionTitles.q4 = '🟢 Gruppo 4 • Verde';
+                state.sectionColors.q1 = 'amber';
+                state.sectionColors.q2 = 'sky';
+                state.sectionColors.q3 = 'rose';
+                state.sectionColors.q4 = 'emerald';
+            }
+
+            // Calcola i rettangoli di destinazione per ciascun gruppo
+            const getZoneRect = (idx) => {
+                if (activeGroups === 2 || activeGroups === 3) {
+                    const colW = (boardW - padX * 2 - gap * (activeGroups - 1)) / activeGroups;
+                    return {
+                        x: padX + idx * (colW + gap) + 18,
+                        y: padTop + headerOffset,
+                        w: Math.max(220, colW - 36),
+                        h: Math.max(300, boardH - padTop - headerOffset - 40)
+                    };
+                }
+                const cellW = (boardW - padX * 2 - gap) / 2;
+                const cellH = (boardH - padTop - gap - 32) / 2;
+                const col = idx % 2;
+                const row = Math.floor(idx / 2);
+                return {
+                    x: padX + col * (cellW + gap) + 18,
+                    y: padTop + row * (cellH + gap) + headerOffset,
+                    w: Math.max(240, cellW - 36),
+                    h: Math.max(220, cellH - headerOffset - 24)
+                };
+            };
+
+            let copiedCount = 0;
+
+            for (let idx = 0; idx < activeGroups; idx++) {
+                const gk = 'g' + (idx + 1);
                 const gb = state.groupBoards[gk];
-                if (!gb) return;
-                gb.items.forEach(item => {
-                    if (!state.items.some(existing => existing.id === item.id)) {
-                        state.items.push({
-                            ...item,
-                            group: idx + 1,
-                            color: item.type === 'note' ? (groupColors[gk] || item.color) : item.color
+                if (!gb) continue;
+
+                const newItems = gb.items.filter(it => !state.items.some(ex => ex.id === it.id));
+                const newVecs = gb.vectors.filter(vc => !state.vectors.some(ex => ex.id === vc.id));
+                if (newItems.length === 0 && newVecs.length === 0) continue;
+
+                // Calcola l'ingombro originale (bounding box) del gruppo per evitare sovrapposizioni
+                let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                newItems.forEach(it => {
+                    const iw = it.width || 225;
+                    const ih = it.height || 145;
+                    minX = Math.min(minX, it.x);
+                    minY = Math.min(minY, it.y);
+                    maxX = Math.max(maxX, it.x + iw);
+                    maxY = Math.max(maxY, it.y + ih);
+                });
+                newVecs.forEach(vc => {
+                    if (vc.type === 'pen' && Array.isArray(vc.points)) {
+                        vc.points.forEach(p => {
+                            minX = Math.min(minX, p.x);
+                            minY = Math.min(minY, p.y);
+                            maxX = Math.max(maxX, p.x);
+                            maxY = Math.max(maxY, p.y);
                         });
-                        copiedCount++;
+                    } else {
+                        minX = Math.min(minX, vc.x1, vc.x2);
+                        minY = Math.min(minY, vc.y1, vc.y2);
+                        maxX = Math.max(maxX, vc.x1, vc.x2);
+                        maxY = Math.max(maxY, vc.y1, vc.y2);
                     }
                 });
-                gb.vectors.forEach(vec => {
-                    if (!state.vectors.some(existing => existing.id === vec.id)) {
-                        state.vectors.push({ ...vec });
-                        copiedCount++;
-                    }
+
+                if (!isFinite(minX)) { minX = 0; minY = 0; maxX = 400; maxY = 300; }
+
+                const srcW = Math.max(260, maxX - minX);
+                const srcH = Math.max(200, maxY - minY);
+                const zone = getZoneRect(idx);
+                const scale = Math.min(1, zone.w / srcW, zone.h / srcH);
+
+                newItems.forEach(item => {
+                    const mappedX = Math.round(zone.x + (item.x - minX) * scale);
+                    const mappedY = Math.round(zone.y + (item.y - minY) * scale);
+                    const mappedW = item.width ? Math.max(155, Math.round(item.width * scale)) : item.width;
+                    const mappedH = item.height ? Math.max(115, Math.round(item.height * scale)) : item.height;
+
+                    state.items.push({
+                        ...item,
+                        x: mappedX,
+                        y: mappedY,
+                        width: mappedW,
+                        height: mappedH,
+                        group: idx + 1,
+                        color: item.type === 'note' ? (groupColors[gk] || item.color) : item.color
+                    });
+                    copiedCount++;
                 });
-            });
+
+                newVecs.forEach(vec => {
+                    if (vec.type === 'pen' && Array.isArray(vec.points)) {
+                        state.vectors.push({
+                            ...vec,
+                            points: vec.points.map(p => ({
+                                x: Math.round(zone.x + (p.x - minX) * scale),
+                                y: Math.round(zone.y + (p.y - minY) * scale)
+                            }))
+                        });
+                    } else {
+                        state.vectors.push({
+                            ...vec,
+                            x1: Math.round(zone.x + (vec.x1 - minX) * scale),
+                            y1: Math.round(zone.y + (vec.y1 - minY) * scale),
+                            x2: Math.round(zone.x + (vec.x2 - minX) * scale),
+                            y2: Math.round(zone.y + (vec.y2 - minY) * scale)
+                        });
+                    }
+                    copiedCount++;
+                });
+            }
+
             state.groupSpaceMode = 'shared';
             state.teacherBoardView = 'main';
+            applyTemplateUI();
             updateGroupModeUI();
             renderAllItems();
             renderAllVectors();
             broadcastState();
             showToast(
                 copiedCount > 0
-                    ? `Riuniti ${copiedCount} elementi dei gruppi nella Lavagna Comune!`
-                    : 'Tutti gli elementi sono già nella Lavagna Comune.',
+                    ? `Riuniti ${copiedCount} elementi in ${activeGroups} riquadri colorati!`
+                    : 'Lavagna comune organizzata nei riquadri dei gruppi!',
                 'success'
             );
         }
