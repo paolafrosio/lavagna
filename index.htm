@@ -248,17 +248,29 @@
     <!-- TAVOLOZZA STRUMENTI LATERALE SINISTRA -->
     <div class="fixed left-3 top-20 z-20 flex flex-col gap-2">
         <div class="bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl shadow-lg p-1.5 flex flex-col gap-1">
-            <button type="button" onclick="setActiveTool('select')" data-tool="select" title="Sposta e seleziona post-it"
+            <button type="button" onclick="setActiveTool('select')" data-tool="select" title="Sposta e seleziona elementi"
                 class="tool-btn w-10 h-10 rounded-xl flex items-center justify-center bg-indigo-600 text-white shadow-sm transition-all cursor-pointer shrink-0">
                 <i data-lucide="mouse-pointer-2" class="w-5 h-5"></i>
+            </button>
+            <button type="button" onclick="setActiveTool('pan')" data-tool="pan" title="Mano: sposta l'intera lavagna"
+                class="tool-btn w-10 h-10 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 transition-all cursor-pointer shrink-0">
+                <i data-lucide="hand" class="w-5 h-5"></i>
             </button>
             <button type="button" onclick="focusNewNoteInput()" title="Scrivi un nuovo post-it"
                 class="w-10 h-10 rounded-xl flex items-center justify-center bg-amber-100 hover:bg-amber-200 text-amber-800 transition-all cursor-pointer shrink-0">
                 <i data-lucide="sticky-note" class="w-5 h-5"></i>
             </button>
+            <button type="button" onclick="setActiveTool('text')" data-tool="text" title="Testo libero / Titolo sulla lavagna"
+                class="tool-btn w-10 h-10 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 transition-all cursor-pointer shrink-0">
+                <i data-lucide="type" class="w-5 h-5"></i>
+            </button>
             <button type="button" onclick="setActiveTool('pen')" data-tool="pen" title="Matita a mano libera"
                 class="tool-btn w-10 h-10 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 transition-all cursor-pointer shrink-0">
                 <i data-lucide="pencil" class="w-5 h-5"></i>
+            </button>
+            <button type="button" onclick="setActiveTool('highlighter')" data-tool="highlighter" title="Evidenziatore semitrasparente"
+                class="tool-btn w-10 h-10 rounded-xl flex items-center justify-center text-amber-600 hover:bg-amber-50 transition-all cursor-pointer shrink-0">
+                <i data-lucide="highlighter" class="w-5 h-5"></i>
             </button>
             <button type="button" onclick="setActiveTool('arrow')" data-tool="arrow" title="Freccia di collegamento"
                 class="tool-btn w-10 h-10 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 transition-all cursor-pointer shrink-0">
@@ -304,6 +316,10 @@
                 <i data-lucide="image-plus" class="w-5 h-5"></i>
             </button>
             <input type="file" id="image-upload-input" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+            <button type="button" id="btn-tool-laser" onclick="setActiveTool('laser')" data-tool="laser" title="Puntatore Laser (solo Docente)"
+                class="tool-btn hidden w-10 h-10 rounded-xl items-center justify-center text-rose-600 hover:bg-rose-50 transition-all cursor-pointer shrink-0">
+                <i data-lucide="sparkles" class="w-5 h-5"></i>
+            </button>
             <div class="border-t border-slate-200 my-0.5"></div>
             <button type="button" onclick="setActiveTool('eraser')" data-tool="eraser" title="Gomma (clicca su un segno per cancellarlo)"
                 class="tool-btn w-10 h-10 rounded-xl flex items-center justify-center text-rose-600 hover:bg-rose-50 transition-all cursor-pointer shrink-0">
@@ -314,6 +330,26 @@
 
     <!-- BARRA DISEGNO / TIMBRI (Contestuale quando scegli matita o timbro) -->
     <div id="context-tool-bar" class="hidden fixed top-20 left-20 z-20 bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl shadow-lg px-3 py-2 flex items-center gap-2 max-w-[calc(100vw-6rem)] overflow-x-auto">
+        <div id="text-tool-hint" class="hidden flex items-center gap-2">
+            <span class="text-xs font-bold text-indigo-700">✍️ Clicca in un punto qualsiasi della lavagna per scrivere un titolo o testo libero</span>
+        </div>
+
+        <div id="laser-tool-hint" class="hidden flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-rose-600 animate-ping"></span>
+            <span class="text-xs font-bold text-rose-700">🔴 Puntatore Laser attivo: muovi il dito o il mouse per indicare agli alunni</span>
+        </div>
+
+        <div id="highlighter-picker-bar" class="hidden flex items-center gap-2">
+            <span class="text-xs font-bold text-slate-500">Evidenziatore:</span>
+            <button type="button" onclick="selectHighlighterColor('hl_yellow')" data-hlcolor="hl_yellow" class="hlcolor-btn w-6 h-6 rounded-full bg-yellow-300 border-2 border-slate-900 scale-110 cursor-pointer" title="Giallo fluo"></button>
+            <button type="button" onclick="selectHighlighterColor('hl_green')" data-hlcolor="hl_green" class="hlcolor-btn w-6 h-6 rounded-full bg-lime-300 border-2 border-transparent cursor-pointer" title="Verde fluo"></button>
+            <button type="button" onclick="selectHighlighterColor('hl_cyan')" data-hlcolor="hl_cyan" class="hlcolor-btn w-6 h-6 rounded-full bg-cyan-300 border-2 border-transparent cursor-pointer" title="Azzurro fluo"></button>
+            <button type="button" onclick="selectHighlighterColor('hl_pink')" data-hlcolor="hl_pink" class="hlcolor-btn w-6 h-6 rounded-full bg-pink-300 border-2 border-transparent cursor-pointer" title="Rosa fluo"></button>
+            <button type="button" onclick="undoLastVector()" title="Annulla ultimo tratto" class="ml-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-rose-50 text-rose-600 text-xs font-bold cursor-pointer">
+                Annulla
+            </button>
+        </div>
+
         <div id="stamp-picker-bar" class="hidden flex items-center gap-1.5">
             <span class="text-xs font-bold text-slate-500 mr-1">Scegli timbro:</span>
             <button type="button" onclick="selectStamp('✅')" data-stamp="✅" title="Corretto / Fatto" class="stamp-choice text-lg p-1 rounded-lg bg-indigo-100 ring-2 ring-indigo-500 cursor-pointer shrink-0">✅</button>
@@ -548,12 +584,33 @@
     <!-- MODALE MODIFICA TESTO POST-IT -->
     <div id="edit-note-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 border border-slate-200">
-            <h3 class="text-lg font-extrabold text-slate-900 mb-3">Modifica Post-it</h3>
+            <h3 id="edit-note-modal-title" class="text-lg font-extrabold text-slate-900 mb-3">Modifica Post-it</h3>
             <textarea id="edit-note-textarea" rows="4" maxlength="240"
                 class="w-full p-3.5 rounded-2xl border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none text-slate-800 text-sm font-medium"></textarea>
             <div class="flex justify-end gap-2 mt-4">
                 <button type="button" onclick="closeEditModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold cursor-pointer">Annulla</button>
                 <button type="button" onclick="saveEditedNote()" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold cursor-pointer">Salva</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALE NUOVO TESTO LIBERO / TITOLO -->
+    <div id="new-text-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 border border-slate-200">
+            <h3 class="text-lg font-extrabold text-slate-900 mb-1">Inserisci Titolo o Testo Libero</h3>
+            <p class="text-xs text-slate-500 mb-3">Compare direttamente sullo sfondo della lavagna, senza riquadro post-it.</p>
+            <input type="text" id="new-free-text-input" placeholder="Es. Esercizio 1: Il sistema scheletrico" maxlength="140"
+                onkeydown="if(event.key==='Enter'){ event.preventDefault(); confirmNewFreeText(); }"
+                class="w-full px-4 py-3 rounded-2xl border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none text-slate-900 text-base font-bold">
+            <div class="flex items-center gap-2 mt-3">
+                <span class="text-xs font-bold text-slate-500">Dimensione:</span>
+                <button type="button" onclick="selectFreeTextSize('md')" data-ftsize="md" class="ftsize-btn px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold cursor-pointer">Normale</button>
+                <button type="button" onclick="selectFreeTextSize('lg')" data-ftsize="lg" class="ftsize-btn px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-bold cursor-pointer">Titolo</button>
+                <button type="button" onclick="selectFreeTextSize('xl')" data-ftsize="xl" class="ftsize-btn px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold cursor-pointer">Grande</button>
+            </div>
+            <div class="flex justify-end gap-2 mt-4">
+                <button type="button" onclick="closeNewTextModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold cursor-pointer">Annulla</button>
+                <button type="button" onclick="confirmNewFreeText()" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold cursor-pointer">Inserisci</button>
             </div>
         </div>
     </div>
@@ -638,6 +695,8 @@
             selectedShapeType: 'rect',
             selectedStamp: '✅',
             strokeColor: 'indigo',
+            highlighterColor: 'hl_yellow',
+            freeTextSize: 'lg',
             strokeWidth: 3,
             template: 'blank',
             sectionTitles: {
@@ -710,7 +769,11 @@
             indigo: '#4f46e5',
             rose: '#e11d48',
             emerald: '#059669',
-            slate: '#334155'
+            slate: '#334155',
+            hl_yellow: '#fde047',
+            hl_green: '#bef264',
+            hl_cyan: '#67e8f9',
+            hl_pink: '#f9a8d4'
         };
 
         const CURSOR_COLORS = [
@@ -734,6 +797,11 @@
         let timerInterval = null;
         let isDrawingVector = false;
         let isErasing = false;
+        let isPanning = false;
+        let panStartClient = { x: 0, y: 0 };
+        let panStartScroll = { left: 0, top: 0 };
+        let pendingTextCoords = { x: 200, y: 200 };
+        let lastLaserSentAt = 0;
         let currentVector = null;
         let lastCursorSentAt = 0;
 
@@ -857,28 +925,10 @@
             document.getElementById('btn-open-teacher-panel').classList.add('flex');
             document.getElementById('freeze-btn').classList.remove('hidden');
             document.getElementById('freeze-btn').classList.add('flex');
-        }
-
-        function setupStudentUI() {
-            document.getElementById('role-badge').textContent = state.userName;
-            document.getElementById('role-badge').className = 'px-2 py-0.5 text-[11px] font-bold rounded-full bg-emerald-100 text-emerald-700 shrink-0';
-        }
-
-        // ---------------- CONNESSIONE REAL-TIME (PEERJS) ----------------
-        function getPeerIdFromRoom(code) {
-            return 'cpia-lavagna-' + code.replace(/[^A-Z0-9]/gi, '').toLowerCase();
-        }
-
-        function setConnectionStatus(status, text) {
-            const dot = document.getElementById('connection-dot');
-            const label = document.getElementById('connection-status');
-            label.textContent = text;
-            if (status === 'online') {
-                dot.className = 'w-2 h-2 rounded-full bg-emerald-500';
-            } else if (status === 'connecting') {
-                dot.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
-            } else {
-                dot.className = 'w-2 h-2 rounded-full bg-rose-500';
+            const laserBtn = document.getElementById('btn-tool-laser');
+            if (laserBtn) {
+                laserBtn.classList.remove('hidden');
+                laserBtn.classList.add('flex');
             }
         }
 
@@ -1160,6 +1210,11 @@
 
         function handleMessageFromHost(msg) {
             if (!msg) return;
+            if (msg.type === 'LASER_MOVE') {
+                const { x, y, active } = msg.payload || {};
+                renderTeacherLaser(x, y, active);
+                return;
+            }
             if (msg.type === 'KICKED') {
                 if (hostConnection) {
                     try { hostConnection.close(); } catch (_) {}
@@ -1243,6 +1298,11 @@
                     btn.className = 'tool-btn w-10 h-10 rounded-xl flex items-center justify-center bg-indigo-600 text-white shadow-sm transition-all cursor-pointer shrink-0';
                 } else if (btn.dataset.tool === 'eraser') {
                     btn.className = 'tool-btn w-10 h-10 rounded-xl flex items-center justify-center text-rose-600 hover:bg-rose-50 transition-all cursor-pointer shrink-0';
+                } else if (btn.dataset.tool === 'highlighter') {
+                    btn.className = 'tool-btn w-10 h-10 rounded-xl flex items-center justify-center text-amber-600 hover:bg-amber-50 transition-all cursor-pointer shrink-0';
+                } else if (btn.dataset.tool === 'laser') {
+                    const isHidden = btn.classList.contains('hidden');
+                    btn.className = `tool-btn ${isHidden ? 'hidden' : 'flex'} w-10 h-10 rounded-xl items-center justify-center text-rose-600 hover:bg-rose-50 transition-all cursor-pointer shrink-0`;
                 } else {
                     btn.className = 'tool-btn w-10 h-10 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 transition-all cursor-pointer shrink-0';
                 }
@@ -1253,12 +1313,18 @@
             const strokeBar = document.getElementById('stroke-picker-bar');
             const shapeSubpicker = document.getElementById('shape-subpicker');
             const eraserBar = document.getElementById('eraser-picker-bar');
+            const hlBar = document.getElementById('highlighter-picker-bar');
+            const textHint = document.getElementById('text-tool-hint');
+            const laserHint = document.getElementById('laser-tool-hint');
 
             contextBar.classList.add('hidden');
             stampBar.classList.add('hidden');
             strokeBar.classList.add('hidden');
             if (shapeSubpicker) shapeSubpicker.classList.add('hidden');
             eraserBar.classList.add('hidden');
+            if (hlBar) hlBar.classList.add('hidden');
+            if (textHint) textHint.classList.add('hidden');
+            if (laserHint) laserHint.classList.add('hidden');
 
             const canvas = document.getElementById('board-canvas');
             const svgLayer = document.getElementById('vectors-svg-layer');
@@ -1267,9 +1333,24 @@
                 svgLayer.style.pointerEvents = 'none';
                 svgLayer.style.zIndex = '5';
             }
+            renderTeacherLaser(0, 0, false);
             renderAllVectors();
 
-            if (tool === 'stamp') {
+            if (tool === 'pan') {
+                canvas.style.cursor = 'grab';
+            } else if (tool === 'text') {
+                contextBar.classList.remove('hidden');
+                if (textHint) textHint.classList.remove('hidden');
+                canvas.style.cursor = 'text';
+            } else if (tool === 'laser') {
+                contextBar.classList.remove('hidden');
+                if (laserHint) laserHint.classList.remove('hidden');
+                canvas.style.cursor = 'crosshair';
+            } else if (tool === 'highlighter') {
+                contextBar.classList.remove('hidden');
+                if (hlBar) hlBar.classList.remove('hidden');
+                canvas.style.cursor = 'crosshair';
+            } else if (tool === 'stamp') {
                 contextBar.classList.remove('hidden');
                 stampBar.classList.remove('hidden');
                 canvas.style.cursor = 'copy';
@@ -1287,30 +1368,79 @@
             }
         }
 
-        function selectShapeType(shapeType) {
-            state.selectedShapeType = shapeType;
-            document.querySelectorAll('.shapetype-btn').forEach(btn => {
-                if (btn.dataset.shapetype === shapeType) {
-                    btn.classList.remove('text-slate-700', 'bg-slate-100', 'hover:bg-slate-100', 'hover:bg-slate-200');
-                    btn.classList.add('bg-indigo-100', 'text-indigo-700', 'ring-2', 'ring-indigo-500');
+        function selectHighlighterColor(color) {
+            state.highlighterColor = color;
+            document.querySelectorAll('.hlcolor-btn').forEach(btn => {
+                if (btn.dataset.hlcolor === color) {
+                    btn.classList.remove('border-transparent');
+                    btn.classList.add('border-slate-900', 'scale-110');
                 } else {
-                    btn.classList.remove('bg-indigo-100', 'text-indigo-700', 'ring-2', 'ring-indigo-500');
-                    btn.classList.add('text-slate-700', 'hover:bg-slate-100');
+                    btn.classList.add('border-transparent');
+                    btn.classList.remove('border-slate-900', 'scale-110');
                 }
             });
-            if (state.activeTool !== 'shape') {
-                setActiveTool('shape');
-            }
         }
 
-        function selectStamp(emoji) {
-            state.selectedStamp = emoji;
-            document.querySelectorAll('.stamp-choice').forEach(btn => {
-                if (btn.dataset.stamp === emoji) {
-                    btn.className = 'stamp-choice text-lg p-1 rounded-lg bg-indigo-100 ring-2 ring-indigo-500 cursor-pointer shrink-0';
+        function selectFreeTextSize(size) {
+            state.freeTextSize = size;
+            document.querySelectorAll('.ftsize-btn').forEach(btn => {
+                if (btn.dataset.ftsize === size) {
+                    btn.className = 'ftsize-btn px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-bold cursor-pointer';
                 } else {
-                    btn.className = 'stamp-choice text-lg p-1 rounded-lg hover:bg-slate-100 cursor-pointer shrink-0';
+                    btn.className = 'ftsize-btn px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold cursor-pointer';
                 }
+            });
+        }
+
+        function closeNewTextModal() {
+            document.getElementById('new-text-modal').classList.add('hidden');
+        }
+
+        function confirmNewFreeText() {
+            const input = document.getElementById('new-free-text-input');
+            const text = input ? input.value.trim() : '';
+            if (!text) return;
+            createBoardItem({
+                type: 'text',
+                text: text,
+                textSize: state.freeTextSize || 'lg',
+                x: Math.max(20, pendingTextCoords.x),
+                y: Math.max(20, pendingTextCoords.y)
+            });
+            input.value = '';
+            closeNewTextModal();
+            setActiveTool('select');
+        }
+
+        function renderTeacherLaser(x, y, active) {
+            const layer = document.getElementById('cursors-layer');
+            if (!layer) return;
+            let dot = document.getElementById('teacher-laser-dot');
+            if (!active) {
+                if (dot) dot.remove();
+                return;
+            }
+            if (!dot) {
+                dot = document.createElement('div');
+                dot.id = 'teacher-laser-dot';
+                dot.className = 'absolute top-0 left-0 pointer-events-none z-40 transition-transform duration-75 ease-out';
+                dot.innerHTML = `
+                    <div class="relative -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
+                        <span class="absolute w-8 h-8 rounded-full bg-rose-500/35 animate-ping"></span>
+                        <span class="w-4 h-4 rounded-full bg-rose-600 border-2 border-white shadow-[0_0_14px_#e11d48]"></span>
+                    </div>
+                `;
+                layer.appendChild(dot);
+            }
+            dot.style.transform = `translate3d(${Math.max(0, Math.min(2990, x))}px, ${Math.max(0, Math.min(1990, y))}px, 0)`;
+        }
+
+        function broadcastTeacherLaser(x, y, active) {
+            if (state.role !== 'teacher') return;
+            renderTeacherLaser(x, y, active);
+            const msg = { type: 'LASER_MOVE', payload: { x, y, active } };
+            Object.values(studentConnections).forEach(conn => {
+                if (conn && conn.open) conn.send(msg);
             });
         }
 
@@ -1397,8 +1527,34 @@
 
         function initCanvasInteractions() {
             const canvas = document.getElementById('board-canvas');
+            const viewport = document.getElementById('board-viewport');
 
             const onPointerDown = (e) => {
+                if (state.activeTool === 'pan') {
+                    if (e.target.closest('button')) return;
+                    if (e.cancelable) e.preventDefault();
+                    isPanning = true;
+                    canvas.style.cursor = 'grabbing';
+                    const touch = (e.touches && e.touches[0]);
+                    panStartClient = {
+                        x: touch ? touch.clientX : e.clientX,
+                        y: touch ? touch.clientY : e.clientY
+                    };
+                    panStartScroll = {
+                        left: viewport ? viewport.scrollLeft : 0,
+                        top: viewport ? viewport.scrollTop : 0
+                    };
+                    return;
+                }
+
+                if (state.activeTool === 'laser' && state.role === 'teacher') {
+                    if (e.target.closest('button')) return;
+                    if (e.cancelable) e.preventDefault();
+                    const pt = getCanvasCoords(e);
+                    broadcastTeacherLaser(pt.x, pt.y, true);
+                    return;
+                }
+
                 if (state.activeTool === 'eraser') {
                     if (e.target.closest('button')) return;
                     if (e.cancelable) e.preventDefault();
@@ -1423,6 +1579,16 @@
 
                 const pt = getCanvasCoords(e);
 
+                if (state.activeTool === 'text') {
+                    if (e.cancelable) e.preventDefault();
+                    pendingTextCoords = { x: pt.x, y: pt.y };
+                    const input = document.getElementById('new-free-text-input');
+                    if (input) input.value = '';
+                    document.getElementById('new-text-modal').classList.remove('hidden');
+                    setTimeout(() => { if (input) input.focus(); }, 30);
+                    return;
+                }
+
                 if (state.activeTool === 'stamp') {
                     createBoardItem({
                         type: 'stamp',
@@ -1433,15 +1599,17 @@
                     return;
                 }
 
-                if (state.activeTool === 'pen' || state.activeTool === 'arrow' || state.activeTool === 'shape') {
+                if (state.activeTool === 'pen' || state.activeTool === 'highlighter' || state.activeTool === 'arrow' || state.activeTool === 'shape') {
                     if (e.cancelable) e.preventDefault();
+                    const isHighlighter = state.activeTool === 'highlighter';
                     isDrawingVector = true;
                     currentVector = {
                         id: 'vec-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
-                        type: state.activeTool,
+                        type: isHighlighter ? 'pen' : state.activeTool,
+                        isHighlighter: isHighlighter,
                         shapeType: state.activeTool === 'shape' ? (state.selectedShapeType || 'rect') : null,
-                        color: state.strokeColor,
-                        strokeWidth: state.strokeWidth || 3,
+                        color: isHighlighter ? (state.highlighterColor || 'hl_yellow') : state.strokeColor,
+                        strokeWidth: isHighlighter ? 22 : (state.strokeWidth || 3),
                         authorId: state.userId,
                         lockedByTeacher: state.role === 'teacher',
                         points: [pt],
@@ -1453,6 +1621,28 @@
             };
 
             const onPointerMove = (e) => {
+                if (isPanning && state.activeTool === 'pan') {
+                    if (e.cancelable) e.preventDefault();
+                    const touch = (e.touches && e.touches[0]);
+                    const cx = touch ? touch.clientX : e.clientX;
+                    const cy = touch ? touch.clientY : e.clientY;
+                    if (viewport) {
+                        viewport.scrollLeft = panStartScroll.left - (cx - panStartClient.x);
+                        viewport.scrollTop = panStartScroll.top - (cy - panStartClient.y);
+                    }
+                    return;
+                }
+
+                if (state.activeTool === 'laser' && state.role === 'teacher') {
+                    const now = Date.now();
+                    if (now - lastLaserSentAt >= 45) {
+                        lastLaserSentAt = now;
+                        const pt = getCanvasCoords(e);
+                        broadcastTeacherLaser(pt.x, pt.y, true);
+                    }
+                    return;
+                }
+
                 if (isErasing && state.activeTool === 'eraser') {
                     if (e.cancelable) e.preventDefault();
                     const vecTarget = e.target && e.target.closest && e.target.closest('[data-vec-id]');
@@ -1494,6 +1684,10 @@
             };
 
             const onPointerUp = () => {
+                if (isPanning) {
+                    isPanning = false;
+                    if (state.activeTool === 'pan') canvas.style.cursor = 'grab';
+                }
                 if (isErasing) {
                     isErasing = false;
                 }
@@ -1559,7 +1753,8 @@
             const hex = STROKE_HEX[vec.color] || STROKE_HEX.indigo;
             const sw = vec.strokeWidth || 3;
             const hitSw = Math.max(28, sw + 24);
-            const opacityAttr = isPreview ? 'opacity="0.65"' : '';
+            const isHl = Boolean(vec.isHighlighter);
+            const opacityAttr = isPreview ? 'opacity="0.65"' : (isHl ? 'opacity="0.45"' : '');
             const deleteAttr = isPreview ? '' : `data-vec-id="${vec.id}" onpointerdown="eraseVectorById('${vec.id}', event)" onclick="eraseVectorById('${vec.id}', event)"`;
             const showEraseBadge = !isPreview && state.activeTool === 'eraser';
             const rot = Number(vec.rotation) || 0;
@@ -2051,6 +2246,7 @@
                 id: 'item-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
                 type: type,
                 text: data.text || '',
+                textSize: data.textSize || 'lg',
                 imageUrl: data.imageUrl || '',
                 width: data.width || (type === 'image' ? 280 : (type === 'note' ? 225 : null)),
                 height: data.height || (type === 'note' ? 150 : null),
@@ -2095,6 +2291,47 @@
             const isProtected = state.role !== 'teacher' && Boolean(item.lockedByTeacher);
             const canMove = state.role === 'teacher' || (!state.isFrozen && !isProtected);
             const canEditOrDelete = state.role === 'teacher' || (isOwner && !state.isFrozen && !isProtected);
+
+            if (item.type === 'text') {
+                const sizeClasses = {
+                    md: 'text-lg sm:text-xl font-bold',
+                    lg: 'text-2xl sm:text-3xl font-extrabold',
+                    xl: 'text-3xl sm:text-5xl font-black'
+                };
+                const txtClass = sizeClasses[item.textSize] || sizeClasses.lg;
+                const el = document.createElement('div');
+                el.id = item.id;
+                el.style.left = `${item.x}px`;
+                el.style.top = `${item.y}px`;
+                el.style.zIndex = item.zIndex || 12;
+                el.style.transform = `rotate(${item.rotation || 0}deg)`;
+                el.className = `board-item pointer-events-auto absolute select-none group px-3 py-1.5 rounded-xl border border-transparent hover:border-indigo-300 hover:bg-white/70 transition-colors ${canMove ? 'cursor-grab' : 'cursor-default'}`;
+                el.innerHTML = `
+                    <div class="relative flex items-center gap-2">
+                        <span class="${txtClass} text-slate-900 tracking-tight whitespace-pre-wrap">${escapeHtml(item.text)}</span>
+                        ${canMove ? `
+                        <button type="button" class="item-rotate-handle opacity-0 group-hover:opacity-100 absolute -top-6 left-1/2 -translate-x-1/2 w-5 h-5 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold flex items-center justify-center shadow-md border border-white cursor-grab transition-opacity" title="Trascina per ruotare">↻</button>` : ''}
+                        ${canEditOrDelete ? `
+                        <div class="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
+                            <button type="button" onclick="openEditNoteModal('${item.id}')" title="Modifica testo"
+                                class="w-6 h-6 rounded-full bg-slate-800 hover:bg-indigo-600 text-white flex items-center justify-center shadow-md cursor-pointer">
+                                <i data-lucide="pencil" class="w-3 h-3"></i>
+                            </button>
+                            <button type="button" onclick="deleteItem('${item.id}')" title="Elimina testo"
+                                class="w-6 h-6 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center justify-center shadow-md cursor-pointer">
+                                ×
+                            </button>
+                        </div>` : ''}
+                    </div>
+                `;
+                container.appendChild(el);
+                if (canMove) {
+                    attachDragHandlers(el, item);
+                    attachRotateHandler(el, item);
+                }
+                lucide.createIcons();
+                return;
+            }
 
             if (item.type === 'stamp') {
                 const el = document.createElement('div');
