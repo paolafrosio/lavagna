@@ -1547,8 +1547,13 @@
             if (data.students) {
                 document.getElementById('participants-count-badge').textContent = Object.keys(data.students).length;
                 if (data.students[state.userId]) {
+                    const prevGroup = state.myGroup;
+                    const prevMode = state.groupSpaceMode;
                     state.myGroup = data.students[state.userId].group;
                     updateStudentGroupBanner();
+                    if (state.myGroup && (state.myGroup !== prevGroup || state.groupSpaceMode !== prevMode)) {
+                        focusStudentOnGroupArea();
+                    }
                 }
             }
 
@@ -1557,6 +1562,22 @@
             updateTimerDisplay();
             renderAllItems();
             renderAllVectors();
+        }
+
+        function focusStudentOnGroupArea() {
+            if (state.role === 'teacher' || state.teamCount <= 0 || !state.myGroup) return;
+            const viewport = document.getElementById('board-viewport');
+            if (!viewport) return;
+
+            if (state.groupSpaceMode === 'separate') {
+                viewport.scrollTo({ left: 0, top: 0, behavior: 'smooth' });
+                return;
+            }
+
+            const z = getGroupZoneBounds(state.myGroup, state.teamCount);
+            const targetLeft = Math.max(0, Math.round(z.x * state.zoom - 16));
+            const targetTop = Math.max(0, Math.round(z.y * state.zoom - 16));
+            viewport.scrollTo({ left: targetLeft, top: targetTop, behavior: 'smooth' });
         }
 
         function updateStudentGroupBanner() {
