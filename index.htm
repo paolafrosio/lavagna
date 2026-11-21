@@ -1470,14 +1470,17 @@
                 if (isValid) {
                     const createdType = currentVector.type;
                     state.vectors.push(currentVector);
-                    renderAllVectors();
                     sendToHost({ type: 'ADD_VECTOR', payload: currentVector });
+                    if (state.role === 'teacher') broadcastState();
 
                     // Dopo aver tracciato una forma o una freccia, torna subito al puntatore
-                    // così puoi spostarla, ruotarla o cancellarla immediatamente senza rischiare di ridisegnarla per errore
+                    // così puoi spostarla, ruotarla o cancellarla immediatamente
                     if (createdType === 'shape' || createdType === 'arrow') {
                         setActiveTool('select');
+                    } else {
+                        renderAllVectors();
                     }
+                    updateBoardEmptyState();
                 }
 
                 currentVector = null;
