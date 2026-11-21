@@ -204,6 +204,9 @@
                 <!-- LIVELLO 3: Elementi Interattivi (Post-it, Immagini, Timbri) -->
                 <div id="items-layer" class="absolute inset-0 z-10 pointer-events-none"></div>
 
+                <!-- LIVELLO 4: Puntatori in tempo reale degli alunni -->
+                <div id="cursors-layer" class="absolute inset-0 z-30 pointer-events-none"></div>
+
                 <!-- Messaggio guida iniziale quando la lavagna è vuota -->
                 <div id="empty-board-hint" class="fixed inset-0 pointer-events-none flex items-center justify-center p-6">
                     <div class="bg-white/90 backdrop-blur-xs border border-slate-200 rounded-3xl p-6 max-w-md text-center shadow-sm">
@@ -695,6 +698,18 @@
         let isDrawingVector = false;
         let currentVector = null;
         let isErasing = false;
+        let lastCursorSentAt = 0;
+
+        const CURSOR_COLORS = [
+            { hex: '#e11d48', bg: 'bg-rose-600' },
+            { hex: '#0284c7', bg: 'bg-sky-600' },
+            { hex: '#059669', bg: 'bg-emerald-600' },
+            { hex: '#d97706', bg: 'bg-amber-600' },
+            { hex: '#7c3aed', bg: 'bg-violet-600' },
+            { hex: '#db2777', bg: 'bg-pink-600' },
+            { hex: '#0d9488', bg: 'bg-teal-600' },
+            { hex: '#ea580c', bg: 'bg-orange-600' }
+        ];
 
         const NOTE_STYLES = {
             yellow: { bg: 'bg-amber-200', border: 'border-amber-300', text: 'text-amber-950', badge: 'bg-amber-500' },
@@ -828,7 +843,10 @@
                     conn.on('close', () => {
                         delete studentConnections[conn.peer];
                         const uid = Object.keys(connectedStudents).find(k => connectedStudents[k].peerId === conn.peer);
-                        if (uid) delete connectedStudents[uid];
+                        if (uid) {
+                            delete connectedStudents[uid];
+                            removeRemoteCursor(uid);
+                        }
                         updateParticipantsUI();
                     });
                 });
@@ -1005,7 +1023,58 @@
                     renderAllVectors();
                     broadcastState();
                 }
+            } else if (msg.type === 'CURSOR_MOVE') {
+                const { userId, name, x, y } = msg.payload || {};
+                if (!userId || typeof x !== 'number' || typeof y !== 'number') return;
+                renderRemoteCursor(userId, name || 'Studente', x, y);
             }
+        }
+
+        function getCursorColorForUser(userId) {
+            let hash = 0;
+            for (let i = 0; i < userId.length; i++) {
+                hash = ((hash << 5) - hash) + userId.charCodeAt(i);
+                hash |= 0;
+            }
+            return CURSOR_COLORS[Math.abs(hash) % CURSOR_COLORS.length];
+        }
+
+        function renderRemoteCursor(userId, name, x, y) {
+            const layer = document.getElementById('cursors-layer');
+            if (!layer) return;
+
+            let cursorEl = document.getElementById('remote-cursor-' + userId);
+            const colorInfo = getCursorColorForUser(userId);
+
+            if (!cursorEl) {
+                cursorEl = document.createElement('div');
+                cursorEl.id = 'remote-cursor-' + userId;
+                cursorEl.className = 'absolute top-0 left-0 pointer-events-none transition-all duration-100 ease-out opacity-70';
+                cursorEl.innerHTML = `
+                    <div class="relative flex items-start">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="${colorInfo.hex}" stroke="#ffffff" stroke-width="2" class="drop-shadow-sm shrink-0">
+                            <path d="M4 3l16 8.5-7.2 2.1L10.7 21 4 3z" stroke-linejoin="round"/>
+                        </svg>
+                        <span class="ml-1 mt-3 px-2 py-0.5 rounded-full ${colorInfo.bg} text-white text-[10px] font-bold tracking-tight shadow-xs whitespace-nowrap border border-white/70">
+                            ${escapeHtml(name)}
+                        </span>
+                    </div>
+                `;
+                layer.appendChild(cursorEl);
+            }
+
+            cursorEl.style.transform = `translate3d(${Math.max(0, Math.min(2980, x))}px, ${Math.max(0, Math.min(1980, y))}px, 0)`;
+            cursorEl.style.opacity = '0.72';
+
+            clearTimeout(cursorEl._hideTimer);
+            cursorEl._hideTimer = setTimeout(() => {
+                if (cursorEl) cursorEl.style.opacity = '0.25';
+            }, 4000);
+        }
+
+        function removeRemoteCursor(userId) {
+            const el = document.getElementById('remote-cursor-' + userId);
+            if (el) el.remove();
         }
 
         function handleMessageFromHost(msg) {
@@ -1349,6 +1418,28 @@
             canvas.addEventListener('touchstart', onPointerDown, { passive: false });
             window.addEventListener('touchmove', onPointerMove, { passive: false });
             window.addEventListener('touchend', onPointerUp);
+
+            // Invio fluido della posizione del puntatore dello studente al docente
+            const sendStudentCursor = (e) => {
+                if (state.role !== 'student') return;
+                const now = Date.now();
+                if (now - lastCursorSentAt < 80) return;
+                lastCursorSentAt = now;
+
+                const pt = getCanvasCoords(e);
+                sendToHost({
+                    type: 'CURSOR_MOVE',
+                    payload: {
+                        userId: state.userId,
+                        name: state.userName,
+                        x: pt.x,
+                        y: pt.y
+                    }
+                });
+            };
+
+            canvas.addEventListener('mousemove', sendStudentCursor);
+            canvas.addEventListener('touchmove', sendStudentCursor, { passive: true });
         }
 
         function buildVectorSvgHtml(vec, isPreview = false) {
