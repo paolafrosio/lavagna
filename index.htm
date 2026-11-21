@@ -1150,7 +1150,17 @@
         }
 
         function handleMessageFromHost(msg) {
-            if (!msg || msg.type !== 'SYNC_STATE') return;
+            if (!msg) return;
+            if (msg.type === 'KICKED') {
+                if (hostConnection) {
+                    try { hostConnection.close(); } catch (_) {}
+                }
+                setConnectionStatus('offline', 'Rimosso dal docente');
+                showToast('Sei stato rimosso dalla stanza dal docente.', 'error');
+                document.getElementById('setup-modal').classList.remove('hidden');
+                return;
+            }
+            if (msg.type !== 'SYNC_STATE') return;
             const data = msg.payload;
             state.items = data.items || [];
             state.vectors = data.vectors || [];
@@ -2785,8 +2795,37 @@
             container.innerHTML = list.map(s => {
                 const gClass = s.group ? groupColors[s.group] : 'bg-slate-100 text-slate-700 border-slate-200';
                 const gLabel = s.group ? ` • Gr.${s.group}` : '';
-                return `<span class="inline-flex items-center px-2 py-0.5 rounded-lg border text-xs font-bold ${gClass}">${escapeHtml(s.name)}${gLabel}</span>`;
+                return `
+                    <span class="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-lg border text-xs font-bold ${gClass}">
+                        <span>${escapeHtml(s.name)}${gLabel}</span>
+                        <button type="button" onclick="kickStudent('${s.userId}')" title="Rimuovi ${escapeHtml(s.name)} dalla stanza"
+                            class="w-4 h-4 rounded-md hover:bg-rose-600 hover:text-white text-slate-500 flex items-center justify-center transition-colors cursor-pointer font-black leading-none">
+                            ×
+                        </button>
+                    </span>
+                `;
             }).join('');
+        }
+
+        function kickStudent(userId) {
+            if (state.role !== 'teacher') return;
+            const student = connectedStudents[userId];
+            if (!student) return;
+
+            const conn = studentConnections[student.peerId];
+            if (conn) {
+                try {
+                    if (conn.open) conn.send({ type: 'KICKED' });
+                    setTimeout(() => { try { conn.close(); } catch (_) {} }, 150);
+                } catch (_) {}
+                delete studentConnections[student.peerId];
+            }
+
+            delete connectedStudents[userId];
+            removeRemoteCursor(userId);
+            updateParticipantsUI();
+            broadcastState();
+            showToast(`${student.name} è stato rimosso dalla stanza.`, 'info');
         }
 
         function toggleFreezeBoard() {
