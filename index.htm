@@ -2719,6 +2719,7 @@
 
         // ---------------- GESTIONE PANNELLO DOCENTE E STANZA ----------------
         function toggleTeacherPanel() {
+            if (state.role !== 'teacher') return;
             const panel = document.getElementById('teacher-panel');
             panel.classList.toggle('hidden');
             updateParticipantsUI();
