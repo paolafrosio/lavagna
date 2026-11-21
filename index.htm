@@ -295,7 +295,21 @@
 
             <!-- Opzioni Compasso -->
             <div id="compass-tool-hint" class="hidden flex items-center gap-2 pl-2 border-l border-slate-200">
-                <span id="compass-readout" class="text-xs font-bold text-slate-700 whitespace-nowrap">Raggio: 130px • Angolo: 0°</span>
+                <span id="compass-readout" class="text-xs font-bold text-slate-700 whitespace-nowrap">Raggio: 140px • Angolo: 0°</span>
+                <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+                    <button type="button" id="btn-compass-snap" onclick="toggleCompassSnap()"
+                        class="px-2 py-0.5 rounded-lg bg-slate-200 text-slate-600 text-xs font-bold cursor-pointer whitespace-nowrap transition-colors">
+                        Snap: OFF
+                    </button>
+                    <select id="compass-snap-step" onchange="setCompassSnapStep(this.value)" title="Scegli il passo di snap in gradi"
+                        class="bg-white border border-slate-200 rounded-lg px-1.5 py-0.5 text-xs font-bold text-slate-700 outline-none cursor-pointer">
+                        <option value="5">5°</option>
+                        <option value="15" selected>15°</option>
+                        <option value="30">30°</option>
+                        <option value="45">45°</option>
+                        <option value="90">90°</option>
+                    </select>
+                </div>
                 <button type="button" onclick="drawFullCompassCircle()"
                     class="px-2.5 py-1 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold cursor-pointer whitespace-nowrap shadow-xs">
                     Cerchio completo
@@ -1630,19 +1644,53 @@
         const compassState = {
             cx: 480,
             cy: 360,
-            radius: 130,
+            radius: 140,
             angle: 0, // radianti
+            snapEnabled: false,
+            snapStepDeg: 15,
             isDraggingCenter: false,
+            isDraggingRadius: false,
             isDraggingPencil: false,
             activeArc: null
         };
+
+        function toggleCompassSnap() {
+            compassState.snapEnabled = !compassState.snapEnabled;
+            const btn = document.getElementById('btn-compass-snap');
+            if (btn) {
+                if (compassState.snapEnabled) {
+                    btn.textContent = 'Snap: ON';
+                    btn.className = 'px-2 py-0.5 rounded-lg bg-indigo-600 text-white text-xs font-bold cursor-pointer whitespace-nowrap transition-colors shadow-2xs';
+                } else {
+                    btn.textContent = 'Snap: OFF';
+                    btn.className = 'px-2 py-0.5 rounded-lg bg-slate-200 text-slate-600 text-xs font-bold cursor-pointer whitespace-nowrap transition-colors';
+                }
+            }
+            if (compassState.snapEnabled) {
+                compassState.angle = applyCompassAngleSnap(compassState.angle);
+                renderCompassOverlay();
+            }
+        }
+
+        function setCompassSnapStep(val) {
+            compassState.snapStepDeg = Math.max(1, parseInt(val, 10) || 15);
+            if (compassState.snapEnabled) {
+                compassState.angle = applyCompassAngleSnap(compassState.angle);
+                renderCompassOverlay();
+            }
+        }
+
+        function applyCompassAngleSnap(rad) {
+            if (!compassState.snapEnabled) return rad;
+            const stepRad = (compassState.snapStepDeg * Math.PI) / 180;
+            return Math.round(rad / stepRad) * stepRad;
+        }
 
         function toggleCompassOverlay(show) {
             const layer = document.getElementById('compass-layer');
             if (!layer) return;
             if (!show) {
                 layer.classList.add('hidden');
-                layer.innerHTML = '';
                 return;
             }
             const viewport = document.getElementById('board-viewport');
@@ -1665,55 +1713,120 @@
             const px = Math.round(cx + Math.cos(angle) * radius);
             const py = Math.round(cy + Math.sin(angle) * radius);
             const hex = STROKE_HEX[state.strokeColor] || STROKE_HEX.indigo;
+            const deg = Math.round(((angle * 180 / Math.PI) % 360 + 360) % 360);
 
-            // Vertice superiore (cerniera del compasso)
+            // Calcolo della geometria realistica delle due aste del compasso tecnico
             const midX = (cx + px) / 2;
             const midY = (cy + py) / 2;
             const dx = px - cx;
             const dy = py - cy;
             const dist = Math.max(1, Math.hypot(dx, dy));
-            const nx = -dy / dist;
-            const ny = dx / dist;
-            const legH = Math.max(95, radius * 0.85);
+            const ux = dx / dist;
+            const uy = dy / dist;
+            // Normale orientata verso l'alto per la cerniera del compasso
+            let nx = -uy;
+            let ny = ux;
+            if (ny > 0.35) {
+                nx = -nx;
+                ny = -ny;
+            }
+            const legH = Math.max(135, radius * 0.92);
             const apexX = Math.round(midX + nx * legH);
             const apexY = Math.round(midY + ny * legH);
+            const handleTopX = Math.round(apexX + nx * 34);
+            const handleTopY = Math.round(apexY + ny * 34);
+
+            // Punti per l'asta metallica sinistra (punta) e destra (porta-mina)
+            const leftMidX = Math.round((apexX + cx) / 2);
+            const leftMidY = Math.round((apexY + cy) / 2);
+            const rightMidX = Math.round((apexX + px) / 2);
+            const rightMidY = Math.round((apexY + py) / 2);
+
+            // Posizione della maniglia di apertura raggio (a 55% lungo il raggio)
+            const radHandleX = Math.round(cx + Math.cos(angle) * (radius * 0.55));
+            const radHandleY = Math.round(cy + Math.sin(angle) * (radius * 0.55));
 
             const readout = document.getElementById('compass-readout');
             if (readout) {
-                const deg = Math.round(((angle * 180 / Math.PI) % 360 + 360) % 360);
                 readout.textContent = `Raggio: ${Math.round(radius)}px • Angolo: ${deg}°`;
             }
 
             layer.innerHTML = `
                 <svg class="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
-                    <!-- Cerchio guida tratteggiato -->
-                    <circle cx="${cx}" cy="${cy}" r="${radius}" fill="none" stroke="${hex}" stroke-width="1.5" stroke-dasharray="6,6" opacity="0.45" />
-                    <!-- Raggio -->
-                    <line x1="${cx}" y1="${cy}" x2="${px}" y2="${py}" stroke="#64748b" stroke-width="1.5" stroke-dasharray="3,3" />
-                    <!-- Gambe del compasso -->
-                    <line x1="${apexX}" y1="${apexY}" x2="${cx}" y2="${cy}" stroke="#334155" stroke-width="6" stroke-linecap="round" />
-                    <line x1="${apexX}" y1="${apexY}" x2="${px}" y2="${py}" stroke="#334155" stroke-width="6" stroke-linecap="round" />
-                    <!-- Vite centrale di apertura -->
-                    <line x1="${Math.round((apexX + cx) / 2)}" y1="${Math.round((apexY + cy) / 2)}"
-                          x2="${Math.round((apexX + px) / 2)}" y2="${Math.round((apexY + py) / 2)}"
-                          stroke="#94a3b8" stroke-width="3" />
-                    <!-- Manico superiore -->
-                    <line x1="${apexX}" y1="${apexY}" x2="${Math.round(apexX + nx * 24)}" y2="${Math.round(apexY + ny * 24)}" stroke="#0f172a" stroke-width="7" stroke-linecap="round" />
-                    <circle cx="${apexX}" cy="${apexY}" r="9" fill="#4f46e5" stroke="#ffffff" stroke-width="2.5" />
+                    <defs>
+                        <linearGradient id="compass-metal" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#e2e8f0" />
+                            <stop offset="50%" stop-color="#94a3b8" />
+                            <stop offset="100%" stop-color="#475569" />
+                        </linearGradient>
+                        <filter id="compass-shadow" x="-20%" y="-20%" width="140%" height="140%">
+                            <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#0f172a" flood-opacity="0.22" />
+                        </filter>
+                    </defs>
+
+                    <!-- Traiettoria circolare guida -->
+                    <circle cx="${cx}" cy="${cy}" r="${radius}" fill="none" stroke="${hex}" stroke-width="1.5" stroke-dasharray="6,6" opacity="0.5" />
+                    <!-- Linea del raggio con tacche -->
+                    <line x1="${cx}" y1="${cy}" x2="${px}" y2="${py}" stroke="#64748b" stroke-width="1.5" stroke-dasharray="3,4" />
+
+                    <g filter="url(#compass-shadow)">
+                        <!-- Asta di regolazione centrale con rotella micrometrica -->
+                        <line x1="${leftMidX}" y1="${leftMidY}" x2="${rightMidX}" y2="${rightMidY}" stroke="#64748b" stroke-width="3.5" />
+                        <rect x="${Math.round((leftMidX + rightMidX) / 2 - 6)}" y="${Math.round((leftMidY + rightMidY) / 2 - 9)}"
+                              width="12" height="18" rx="3" fill="#334155" stroke="#cbd5e1" stroke-width="1.5" />
+
+                        <!-- Ago metallico d'acciaio sul centro -->
+                        <line x1="${cx}" y1="${cy}" x2="${Math.round(cx + (apexX - cx) * 0.16)}" y2="${Math.round(cy + (apexY - cy) * 0.16)}"
+                              stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" />
+                        <!-- Gamba sinistra (punta) -->
+                        <line x1="${apexX}" y1="${apexY}" x2="${Math.round(cx + (apexX - cx) * 0.14)}" y2="${Math.round(cy + (apexY - cy) * 0.14)}"
+                              stroke="url(#compass-metal)" stroke-width="9" stroke-linecap="round" />
+
+                        <!-- Mina colorata sulla punta scrivente -->
+                        <line x1="${px}" y1="${py}" x2="${Math.round(px + (apexX - px) * 0.15)}" y2="${Math.round(py + (apexY - py) * 0.15)}"
+                              stroke="${hex}" stroke-width="4" stroke-linecap="round" />
+                        <!-- Gamba destra (porta-mina) -->
+                        <line x1="${apexX}" y1="${apexY}" x2="${Math.round(px + (apexX - px) * 0.13)}" y2="${Math.round(py + (apexY - py) * 0.13)}"
+                              stroke="url(#compass-metal)" stroke-width="9" stroke-linecap="round" />
+
+                        <!-- Impugnatura superiore zigrinata -->
+                        <line x1="${apexX}" y1="${apexY}" x2="${handleTopX}" y2="${handleTopY}" stroke="#1e293b" stroke-width="8" stroke-linecap="round" />
+                        <circle cx="${handleTopX}" cy="${handleTopY}" r="5.5" fill="#4f46e5" stroke="#ffffff" stroke-width="2" />
+
+                        <!-- Cerniera circolare superiore -->
+                        <circle cx="${apexX}" cy="${apexY}" r="13" fill="#1e293b" stroke="#e2e8f0" stroke-width="2.5" />
+                        <circle cx="${apexX}" cy="${apexY}" r="5" fill="#94a3b8" />
+                    </g>
+
+                    <!-- Etichetta raggio -->
+                    <g transform="translate(${radHandleX}, ${radHandleY - 24})">
+                        <rect x="-28" y="-11" width="56" height="20" rx="10" fill="#0f172a" opacity="0.88" />
+                        <text x="0" y="3" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="bold" font-family="Inter, sans-serif">${Math.round(radius)} px</text>
+                    </g>
                 </svg>
 
-                <!-- Maniglia Punta (Centro) -->
+                <!-- 1. Maniglia Punta (Centro): sposta il compasso -->
                 <div id="compass-center-handle"
-                    style="left:${cx - 18}px; top:${cy - 18}px;"
+                    style="left:${cx - 17}px; top:${cy - 17}px;"
                     title="Trascina per spostare la punta del compasso"
-                    class="pointer-events-auto absolute w-9 h-9 rounded-full bg-slate-900/90 hover:bg-indigo-600 text-white border-2 border-white shadow-lg flex items-center justify-center cursor-move select-none">
-                    <span class="w-2.5 h-2.5 rounded-full bg-rose-400"></span>
+                    class="pointer-events-auto absolute w-[34px] h-[34px] rounded-full bg-slate-900/90 hover:bg-slate-800 text-white border-2 border-white shadow-lg flex items-center justify-center cursor-move select-none">
+                    <span class="w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-white/60"></span>
                 </div>
 
-                <!-- Maniglia Mina (Apertura raggio + Rotazione per disegnare) -->
+                <!-- 2. Maniglia Apertura Raggio: allarga o stringe senza disegnare -->
+                <div id="compass-radius-handle"
+                    style="left:${radHandleX - 15}px; top:${radHandleY - 15}px;"
+                    title="Trascina per aprire o chiudere il raggio"
+                    class="pointer-events-auto absolute w-[30px] h-[30px] rounded-full bg-sky-600 hover:bg-sky-500 text-white border-2 border-white shadow-md flex items-center justify-center cursor-ew-resize select-none">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m18 8 4 4-4 4"/><path d="M2 12h20"/><path d="m6 8-4 4 4 4"/>
+                    </svg>
+                </div>
+
+                <!-- 3. Maniglia Mina: ruota a raggio fisso bloccato e traccia l'arco perfetto -->
                 <div id="compass-pencil-handle"
                     style="left:${px - 20}px; top:${py - 20}px; background-color:${hex};"
-                    title="Trascina per aprire il compasso o ruotare e tracciare"
+                    title="Ruota attorno al centro per tracciare un arco perfetto"
                     class="pointer-events-auto absolute w-10 h-10 rounded-full text-white border-2 border-white shadow-xl flex items-center justify-center cursor-grab active:cursor-grabbing select-none">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
@@ -1722,8 +1835,10 @@
             `;
 
             const centerHandle = document.getElementById('compass-center-handle');
+            const radiusHandle = document.getElementById('compass-radius-handle');
             const pencilHandle = document.getElementById('compass-pencil-handle');
             if (centerHandle) attachCompassCenterDrag(centerHandle);
+            if (radiusHandle) attachCompassRadiusDrag(radiusHandle);
             if (pencilHandle) attachCompassPencilDrag(pencilHandle);
         }
 
@@ -1731,6 +1846,7 @@
             const onMove = (e) => {
                 if (!compassState.isDraggingCenter) return;
                 if (e.cancelable) e.preventDefault();
+                e.stopPropagation();
                 const pt = getCanvasCoords(e);
                 const clamped = clampCoordsToStudentZone(pt.x, pt.y, 20, 20);
                 compassState.cx = clamped.x;
@@ -1758,41 +1874,77 @@
             handle.addEventListener('touchstart', onStart, { passive: false });
         }
 
+        function attachCompassRadiusDrag(handle) {
+            const onMove = (e) => {
+                if (!compassState.isDraggingRadius) return;
+                if (e.cancelable) e.preventDefault();
+                e.stopPropagation();
+                const pt = getCanvasCoords(e);
+                const dx = pt.x - compassState.cx;
+                const dy = pt.y - compassState.cy;
+                // Il cursore si trova al 55% del raggio, quindi moltiplichiamo per ~1.8
+                const rawR = Math.hypot(dx, dy) / 0.55;
+                compassState.radius = Math.max(35, Math.min(750, Math.round(rawR)));
+                compassState.angle = applyCompassAngleSnap(Math.atan2(dy, dx));
+                renderCompassOverlay();
+            };
+            const onEnd = () => {
+                if (!compassState.isDraggingRadius) return;
+                compassState.isDraggingRadius = false;
+                window.removeEventListener('mousemove', onMove);
+                window.removeEventListener('mouseup', onEnd);
+                window.removeEventListener('touchmove', onMove);
+                window.removeEventListener('touchend', onEnd);
+            };
+            const onStart = (e) => {
+                e.stopPropagation();
+                if (e.cancelable) e.preventDefault();
+                compassState.isDraggingRadius = true;
+                window.addEventListener('mousemove', onMove);
+                window.addEventListener('mouseup', onEnd);
+                window.addEventListener('touchmove', onMove, { passive: false });
+                window.addEventListener('touchend', onEnd);
+            };
+            handle.addEventListener('mousedown', onStart);
+            handle.addEventListener('touchstart', onStart, { passive: false });
+        }
+
         function attachCompassPencilDrag(handle) {
             let lastAngle = 0;
             let totalSweep = 0;
+            let lockedRadius = 140;
 
             const onMove = (e) => {
                 if (!compassState.isDraggingPencil) return;
                 if (e.cancelable) e.preventDefault();
+                e.stopPropagation();
                 const pt = getCanvasCoords(e);
                 const dx = pt.x - compassState.cx;
                 const dy = pt.y - compassState.cy;
-                const newRadius = Math.max(25, Math.min(750, Math.hypot(dx, dy)));
-                const newAngle = Math.atan2(dy, dx);
+                if (Math.hypot(dx, dy) < 8) return;
 
+                const newAngle = applyCompassAngleSnap(Math.atan2(dy, dx));
                 let delta = newAngle - lastAngle;
                 while (delta > Math.PI) delta -= Math.PI * 2;
                 while (delta < -Math.PI) delta += Math.PI * 2;
-                totalSweep += delta;
-                lastAngle = newAngle;
 
-                compassState.radius = newRadius;
-                compassState.angle = newAngle;
-
-                const px = Math.round(compassState.cx + Math.cos(newAngle) * newRadius);
-                const py = Math.round(compassState.cy + Math.sin(newAngle) * newRadius);
-                const clampedPt = clampCoordsToStudentZone(px, py, 6, 6);
-
+                // Campionamento fitto lungo la circonferenza a RAGGIO BLOCCATO (lockedRadius)
+                const steps = Math.max(1, Math.ceil(Math.abs(delta) / 0.045));
                 if (compassState.activeArc) {
                     const pts = compassState.activeArc.points;
-                    const lastPt = pts[pts.length - 1];
-                    if (!lastPt || Math.hypot(clampedPt.x - lastPt.x, clampedPt.y - lastPt.y) >= 3) {
-                        pts.push(clampedPt);
-                        currentVector = compassState.activeArc;
-                        renderVectorPreview();
+                    for (let s = 1; s <= steps; s++) {
+                        const interpAngle = lastAngle + (delta * s) / steps;
+                        const px = Math.round(compassState.cx + Math.cos(interpAngle) * lockedRadius);
+                        const py = Math.round(compassState.cy + Math.sin(interpAngle) * lockedRadius);
+                        pts.push(clampCoordsToStudentZone(px, py, 4, 4));
                     }
+                    currentVector = compassState.activeArc;
+                    renderVectorPreview();
                 }
+
+                totalSweep += delta;
+                lastAngle = newAngle;
+                compassState.angle = newAngle;
                 renderCompassOverlay();
             };
 
@@ -1811,7 +1963,7 @@
                 if (previewLayer) previewLayer.innerHTML = '';
 
                 if (arc && arc.points.length > 2) {
-                    // Chiude automaticamente il cerchio se la rotazione supera i ~345°
+                    // Chiude perfettamente il cerchio se la rotazione supera i ~345°
                     if (Math.abs(totalSweep) >= Math.PI * 1.92) {
                         arc.points.push({ ...arc.points[0] });
                     }
@@ -1832,12 +1984,13 @@
                     return;
                 }
                 compassState.isDraggingPencil = true;
+                lockedRadius = compassState.radius;
                 lastAngle = compassState.angle;
                 totalSweep = 0;
 
-                const startX = Math.round(compassState.cx + Math.cos(compassState.angle) * compassState.radius);
-                const startY = Math.round(compassState.cy + Math.sin(compassState.angle) * compassState.radius);
-                const clampedStart = clampCoordsToStudentZone(startX, startY, 6, 6);
+                const startX = Math.round(compassState.cx + Math.cos(compassState.angle) * lockedRadius);
+                const startY = Math.round(compassState.cy + Math.sin(compassState.angle) * lockedRadius);
+                const clampedStart = clampCoordsToStudentZone(startX, startY, 4, 4);
 
                 compassState.activeArc = {
                     id: 'vec-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
