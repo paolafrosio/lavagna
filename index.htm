@@ -412,35 +412,14 @@
                 <i data-lucide="lock" class="w-4 h-4"></i>
                 <span id="panel-freeze-label">Blocca tutti gli alunni</span>
             </button>
-        </div>
-
-        <div>
-            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Struttura Lavagna (Modelli)</label>
-            <div class="grid grid-cols-2 gap-1.5">
-                <button type="button" onclick="changeTemplate('blank')" data-tpl="blank"
-                    class="tpl-btn px-3 py-2 rounded-xl border-2 border-indigo-600 bg-indigo-50 text-indigo-700 text-xs font-bold text-left cursor-pointer">
-                    1. Libera
-                </button>
-                <button type="button" onclick="changeTemplate('kanban')" data-tpl="kanban"
-                    class="tpl-btn px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold text-left cursor-pointer">
-                    2. 3 Colonne / Kanban
-                </button>
-                <button type="button" onclick="changeTemplate('quadrants')" data-tpl="quadrants"
-                    class="tpl-btn px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold text-left cursor-pointer">
-                    3. 4 Quadranti / Gruppi
-                </button>
-                <button type="button" onclick="changeTemplate('timeline')" data-tpl="timeline"
-                    class="tpl-btn px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold text-left cursor-pointer">
-                    4. Linea del Tempo
-                </button>
-                <button type="button" onclick="changeTemplate('mindmap')" data-tpl="mindmap"
-                    class="tpl-btn px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold text-left cursor-pointer">
-                    5. Mappa Mentale
-                </button>
-                <button type="button" onclick="changeTemplate('procon')" data-tpl="procon"
-                    class="tpl-btn px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold text-left cursor-pointer">
-                    6. Pro e Contro
-                </button>
+            <button type="button" id="panel-lock-room-btn" onclick="toggleRoomLock()"
+                class="mt-1.5 w-full py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer">
+                <i id="panel-lock-room-icon" data-lucide="door-open" class="w-4 h-4 text-emerald-600"></i>
+                <span id="panel-lock-room-label">Porta aperta (nuovi ingressi consentiti)</span>
+            </button>
+            <div id="kicked-students-box" class="hidden mt-2 pt-2 border-t border-slate-100">
+                <label class="block text-[10px] font-bold uppercase tracking-wider text-rose-500 mb-1">Rimossi (clicca per riammettere):</label>
+                <div id="kicked-students-list" class="flex flex-wrap gap-1.5"></div>
             </div>
         </div>
 
@@ -635,10 +614,24 @@
         let hasTeacherUrlKey = false;
 
         // ---------------- STATO GLOBALE DELL'APPLICAZIONE ----------------
+        function getPersistentDeviceId() {
+            try {
+                let did = localStorage.getItem('cpia_lavagna_device_id');
+                if (!did) {
+                    did = 'dev-' + Math.random().toString(36).substring(2, 10) + '-' + Date.now().toString(36);
+                    localStorage.setItem('cpia_lavagna_device_id', did);
+                }
+                return did;
+            } catch (_) {
+                return 'dev-' + Math.random().toString(36).substring(2, 10);
+            }
+        }
+
         const state = {
             role: 'student',
             userName: '',
             userId: 'user-' + Math.random().toString(36).substring(2, 9),
+            deviceId: getPersistentDeviceId(),
             roomCode: '',
             selectedColor: 'yellow',
             activeTool: 'select',
@@ -673,6 +666,7 @@
             teamCount: 0,
             myGroup: null,
             isFrozen: false,
+            isRoomLocked: false,
             zoom: 1,
             items: [],
             vectors: [],
@@ -733,6 +727,7 @@
         let hostConnection = null;
         let studentConnections = {};
         let connectedStudents = {};
+        let bannedDevices = {}; // deviceId -> ultimo nome usato
         let editingNoteId = null;
         let editingSectionKey = null;
         let selectedSectionColor = 'slate';
@@ -940,7 +935,7 @@
                         setConnectionStatus('online', 'Connesso alla lavagna di classe');
                         hostConnection.send({
                             type: 'JOIN',
-                            payload: { userId: state.userId, name: state.userName }
+                            payload: { userId: state.userId, deviceId: state.deviceId, name: state.userName }
                         });
                     });
 
@@ -996,9 +991,23 @@
             if (!msg || !msg.type) return;
 
             if (msg.type === 'JOIN') {
-                const { userId, name } = msg.payload;
+                const { userId, deviceId, name } = msg.payload;
+                if (deviceId && bannedDevices[deviceId]) {
+                    try {
+                        if (conn.open) conn.send({ type: 'BANNED' });
+                        setTimeout(() => { try { conn.close(); } catch (_) {} }, 150);
+                    } catch (_) {}
+                    return;
+                }
+                if (state.isRoomLocked) {
+                    try {
+                        if (conn.open) conn.send({ type: 'ROOM_LOCKED' });
+                        setTimeout(() => { try { conn.close(); } catch (_) {} }, 150);
+                    } catch (_) {}
+                    return;
+                }
                 const assignedGroup = assignStudentGroup(userId);
-                connectedStudents[userId] = { userId, name, peerId: conn.peer, group: assignedGroup };
+                connectedStudents[userId] = { userId, deviceId: deviceId || userId, name, peerId: conn.peer, group: assignedGroup };
                 updateParticipantsUI();
                 showToast(`${name} è entrato nella lavagna!`, 'info');
                 broadcastState();
@@ -1157,6 +1166,24 @@
                 }
                 setConnectionStatus('offline', 'Rimosso dal docente');
                 showToast('Sei stato rimosso dalla stanza dal docente.', 'error');
+                document.getElementById('setup-modal').classList.remove('hidden');
+                return;
+            }
+            if (msg.type === 'BANNED') {
+                if (hostConnection) {
+                    try { hostConnection.close(); } catch (_) {}
+                }
+                setConnectionStatus('offline', 'Accesso bloccato dal docente');
+                showToast('Il docente ha bloccato il tuo dispositivo da questa stanza.', 'error');
+                document.getElementById('setup-modal').classList.remove('hidden');
+                return;
+            }
+            if (msg.type === 'ROOM_LOCKED') {
+                if (hostConnection) {
+                    try { hostConnection.close(); } catch (_) {}
+                }
+                setConnectionStatus('offline', 'Stanza chiusa dal docente');
+                showToast('La stanza è chiusa: il docente non accetta nuovi ingressi.', 'error');
                 document.getElementById('setup-modal').classList.remove('hidden');
                 return;
             }
@@ -2779,6 +2806,24 @@
             document.getElementById('participants-count-badge').textContent = list.length;
             document.getElementById('modal-student-count').textContent = list.length;
 
+            const kickedBox = document.getElementById('kicked-students-box');
+            const kickedList = document.getElementById('kicked-students-list');
+            const bannedEntries = Object.entries(bannedDevices);
+            if (kickedBox && kickedList) {
+                if (bannedEntries.length === 0) {
+                    kickedBox.classList.add('hidden');
+                } else {
+                    kickedBox.classList.remove('hidden');
+                    kickedList.innerHTML = bannedEntries.map(([devId, sName]) => `
+                        <button type="button" onclick="readmitStudent('${devId}')" title="Clicca per riammettere ${escapeHtml(sName)}"
+                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-rose-50 hover:bg-emerald-50 border border-rose-200 hover:border-emerald-300 text-rose-700 hover:text-emerald-700 text-xs font-bold transition-colors cursor-pointer">
+                            <span>${escapeHtml(sName)}</span>
+                            <span class="text-[11px]">↺</span>
+                        </button>
+                    `).join('');
+                }
+            }
+
             const container = document.getElementById('participants-list');
             if (list.length === 0) {
                 container.innerHTML = `<span class="text-xs text-slate-400 italic">Nessuno studente ancora connesso...</span>`;
@@ -2812,6 +2857,10 @@
             const student = connectedStudents[userId];
             if (!student) return;
 
+            if (student.deviceId) {
+                bannedDevices[student.deviceId] = student.name;
+            }
+
             const conn = studentConnections[student.peerId];
             if (conn) {
                 try {
@@ -2825,310 +2874,34 @@
             removeRemoteCursor(userId);
             updateParticipantsUI();
             broadcastState();
-            showToast(`${student.name} è stato rimosso dalla stanza.`, 'info');
+            showToast(`${student.name} è stato rimosso e bloccato.`, 'info');
+        }
+
+        function readmitStudent(deviceId) {
+            if (state.role !== 'teacher') return;
+            const name = bannedDevices[deviceId] || 'Studente';
+            delete bannedDevices[deviceId];
+            updateParticipantsUI();
+            showToast(`${name} ora può rientrare nella lavagna!`, 'success');
+        }
+
+        function toggleRoomLock() {
+            if (state.role !== 'teacher') return;
+            state.isRoomLocked = !state.isRoomLocked;
+            const btn = document.getElementById('panel-lock-room-btn');
+            const label = document.getElementById('panel-lock-room-label');
+            if (state.isRoomLocked) {
+                btn.className = 'mt-1.5 w-full py-2 px-3 rounded-xl bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-900 text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer';
+                label.textContent = '🔒 Porta chiusa (nessun nuovo ingresso)';
+                showToast('Porta chiusa: nessuno studente nuovo può entrare.', 'info');
+            } else {
+                btn.className = 'mt-1.5 w-full py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer';
+                label.textContent = '🚪 Porta aperta (nuovi ingressi consentiti)';
+                showToast('Porta riaperta: gli studenti possono entrare.', 'info');
+            }
         }
 
         function toggleFreezeBoard() {
-            if (state.role !== 'teacher') return;
-            state.isFrozen = !state.isFrozen;
-            updateFreezeUI();
-            broadcastState();
-            showToast(state.isFrozen ? '🔒 Tutti gli alunni sono stati bloccati.' : '🔓 Alunni sbloccati: ora possono interagire.', 'info');
-        }
-
-        function updateFreezeUI() {
-            const btn = document.getElementById('freeze-btn');
-            const label = document.getElementById('freeze-label');
-            const panelBtn = document.getElementById('panel-freeze-btn');
-            const panelLabel = document.getElementById('panel-freeze-label');
-            const banner = document.getElementById('frozen-banner');
-
-            if (state.isFrozen) {
-                if (btn) {
-                    btn.className = 'flex items-center gap-1.5 bg-rose-600 hover:bg-rose-700 border border-rose-700 text-white px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer shadow-sm animate-pulse';
-                }
-                if (label) label.textContent = 'Sblocca tutti';
-                if (panelBtn) {
-                    panelBtn.className = 'mt-2 w-full py-2.5 px-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm';
-                }
-                if (panelLabel) panelLabel.textContent = 'Sblocca tutti gli alunni';
-                banner.textContent = state.role === 'teacher'
-                    ? '🔒 Modalità blocco attiva: tutti gli alunni sono bloccati (tu puoi continuare a lavorare). Clicca su "Sblocca tutti" per riattivare la classe.'
-                    : '🔒 Il docente ha bloccato la lavagna per la spiegazione. Puoi osservare ma non modificare.';
-                banner.classList.remove('hidden');
-            } else {
-                if (btn) {
-                    btn.className = 'flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer shadow-xs';
-                }
-                if (label) label.textContent = 'Blocca tutti';
-                if (panelBtn) {
-                    panelBtn.className = 'mt-2 w-full py-2.5 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer';
-                }
-                if (panelLabel) panelLabel.textContent = 'Blocca tutti gli alunni';
-                banner.classList.add('hidden');
-            }
-            lucide.createIcons();
-        }
-
-        // ---------------- TIMER CLASSE ----------------
-        function startClassTimer(seconds) {
-            if (state.role !== 'teacher') return;
-            clearInterval(timerInterval);
-            state.timerSeconds = seconds;
-            state.timerRunning = true;
-            updateTimerDisplay();
-            broadcastState();
-
-            timerInterval = setInterval(() => {
-                if (state.timerSeconds > 0) {
-                    state.timerSeconds--;
-                    updateTimerDisplay();
-                    if (state.timerSeconds % 5 === 0 || state.timerSeconds <= 10) {
-                        broadcastState();
-                    }
-                } else {
-                    clearInterval(timerInterval);
-                    state.timerRunning = false;
-                    broadcastState();
-                    showToast('⏰ Tempo scaduto!', 'info');
-                }
-            }, 1000);
-        }
-
-        function stopClassTimer() {
-            if (state.role !== 'teacher') return;
-            clearInterval(timerInterval);
-            state.timerSeconds = 0;
-            state.timerRunning = false;
-            updateTimerDisplay();
-            broadcastState();
-        }
-
-        function updateTimerDisplay() {
-            const pill = document.getElementById('timer-pill');
-            const text = document.getElementById('timer-display');
-            if (!state.timerRunning && state.timerSeconds <= 0) {
-                pill.classList.add('hidden');
-                return;
-            }
-            pill.classList.remove('hidden');
-            const mins = Math.floor(state.timerSeconds / 60).toString().padStart(2, '0');
-            const secs = (state.timerSeconds % 60).toString().padStart(2, '0');
-            text.textContent = `${mins}:${secs}`;
-        }
-
-        // ---------------- ZOOM, PULIZIA ED ESPORTAZIONE ----------------
-        function setZoom(newZoom) {
-            state.zoom = Math.max(0.35, Math.min(2.0, Math.round(newZoom * 100) / 100));
-            const canvas = document.getElementById('board-canvas');
-            const sizer = document.getElementById('board-zoom-sizer');
-            canvas.style.transform = `scale(${state.zoom})`;
-            if (sizer) {
-                sizer.style.width = `${Math.round(3000 * state.zoom)}px`;
-                sizer.style.height = `${Math.round(2000 * state.zoom)}px`;
-            }
-            document.getElementById('zoom-level').textContent = `${Math.round(state.zoom * 100)}%`;
-        }
-
-        function adjustZoom(delta) {
-            setZoom(state.zoom + delta);
-        }
-
-        function fitBoardToScreen() {
-            const viewport = document.getElementById('board-viewport');
-            if (!viewport) return;
-            const scaleX = viewport.clientWidth / 3000;
-            const scaleY = viewport.clientHeight / 2000;
-            const fitScale = Math.max(0.35, Math.min(1, Math.min(scaleX, scaleY)));
-            setZoom(fitScale);
-            viewport.scrollTo({ left: 0, top: 0, behavior: 'smooth' });
-        }
-
-        function initZoomGestures() {
-            const viewport = document.getElementById('board-viewport');
-            if (!viewport) return;
-
-            // Zoom con Ctrl + rotellina del mouse
-            viewport.addEventListener('wheel', (e) => {
-                if (e.ctrlKey || e.metaKey) {
-                    e.preventDefault();
-                    const step = e.deltaY < 0 ? 0.08 : -0.08;
-                    setZoom(state.zoom + step);
-                }
-            }, { passive: false });
-
-            // Pinch-to-zoom a due dita su touchscreen / LIM
-            let initialPinchDist = null;
-            let initialPinchZoom = 1;
-
-            viewport.addEventListener('touchstart', (e) => {
-                if (e.touches.length === 2) {
-                    initialPinchDist = Math.hypot(
-                        e.touches[0].clientX - e.touches[1].clientX,
-                        e.touches[0].clientY - e.touches[1].clientY
-                    );
-                    initialPinchZoom = state.zoom;
-                }
-            }, { passive: true });
-
-            viewport.addEventListener('touchmove', (e) => {
-                if (e.touches.length === 2 && initialPinchDist) {
-                    e.preventDefault();
-                    const currentDist = Math.hypot(
-                        e.touches[0].clientX - e.touches[1].clientX,
-                        e.touches[0].clientY - e.touches[1].clientY
-                    );
-                    setZoom(initialPinchZoom * (currentDist / initialPinchDist));
-                }
-            }, { passive: false });
-
-            viewport.addEventListener('touchend', () => {
-                initialPinchDist = null;
-            });
-        }
-
-        function resetBoardItems() {
-            if (state.role !== 'teacher') return;
-            state.items = [];
-            state.vectors = [];
-            renderAllItems();
-            renderAllVectors();
-            broadcastState();
-            showToast('Lavagna completamente svuotata.', 'info');
-        }
-
-        function saveLessonFile() {
-            const lessonData = {
-                app: 'Lavagna-CPIA',
-                version: 1,
-                savedAt: new Date().toISOString(),
-                template: state.template,
-                sectionTitles: state.sectionTitles,
-                sectionColors: state.sectionColors,
-                teamCount: state.teamCount,
-                items: state.items,
-                vectors: state.vectors
-            };
-
-            const jsonStr = JSON.stringify(lessonData, null, 2);
-            const blob = new Blob([jsonStr], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            const dateStr = new Date().toISOString().slice(0, 10);
-            a.href = url;
-            a.download = `lezione-lavagna-${dateStr}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-            showToast('File della lezione salvato sul PC!', 'success');
-        }
-
-        function loadLessonFile(event) {
-            if (state.role !== 'teacher') return;
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    if (!data || data.app !== 'Lavagna-CPIA') {
-                        showToast('File non valido: scegli un file .json salvato dalla lavagna.', 'error');
-                        return;
-                    }
-
-                    state.template = data.template || 'blank';
-                    state.sectionTitles = { ...state.sectionTitles, ...(data.sectionTitles || {}) };
-                    state.sectionColors = { ...DEFAULT_SECTION_COLORS, ...(data.sectionColors || {}) };
-                    state.teamCount = data.teamCount || 0;
-                    state.items = Array.isArray(data.items) ? data.items : [];
-                    state.vectors = Array.isArray(data.vectors) ? data.vectors : [];
-
-                    applyTemplateUI();
-                    renderAllItems();
-                    renderAllVectors();
-                    broadcastState();
-                    showToast('Lezione caricata e sincronizzata con la classe!', 'success');
-                } catch (err) {
-                    showToast('Errore nella lettura del file lezione.', 'error');
-                }
-            };
-            reader.readAsText(file);
-            event.target.value = '';
-        }
-
-        function exportBoardImage() {
-            const exportCanvas = document.createElement('canvas');
-            exportCanvas.width = 1800;
-            exportCanvas.height = 1100;
-            const ctx = exportCanvas.getContext('2d');
-
-            ctx.fillStyle = '#f8fafc';
-            ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
-
-            ctx.fillStyle = '#1e293b';
-            ctx.font = 'bold 28px Inter, sans-serif';
-            ctx.fillText(`Lavagna Collaborativa CPIA • Stanza ${state.roomCode}`, 48, 56);
-
-            const hexMap = { yellow: '#fef08a', blue: '#bae6fd', pink: '#fecdd3', green: '#bbf7d0', purple: '#e9d5ff' };
-            state.items.forEach(item => {
-                if (item.type === 'note') {
-                    ctx.fillStyle = hexMap[item.color] || '#fef08a';
-                    ctx.beginPath();
-                    ctx.roundRect(item.x, item.y, 230, 155, 16);
-                    ctx.fill();
-                    ctx.strokeStyle = '#cbd5e1';
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
-
-                    ctx.fillStyle = '#0f172a';
-                    ctx.font = 'bold 14px Inter, sans-serif';
-                    ctx.fillText(item.author, item.x + 14, item.y + 26);
-
-                    ctx.font = '15px Inter, sans-serif';
-                    const words = item.text.split(' ');
-                    let line = '';
-                    let lineY = item.y + 52;
-                    words.forEach(w => {
-                        if ((line + w).length > 26) {
-                            ctx.fillText(line, item.x + 14, lineY);
-                            line = w + ' ';
-                            lineY += 20;
-                        } else {
-                            line += w + ' ';
-                        }
-                    });
-                    ctx.fillText(line, item.x + 14, lineY);
-                } else if (item.type === 'stamp') {
-                    ctx.font = '44px serif';
-                    ctx.fillText(item.text, item.x, item.y + 40);
-                }
-            });
-
-            const link = document.createElement('a');
-            link.download = `lavagna-${state.roomCode.toLowerCase()}.png`;
-            link.href = exportCanvas.toDataURL('image/png');
-            link.click();
-            showToast('Immagine della lavagna scaricata!', 'success');
-        }
-
-        // ---------------- UTILITÀ ----------------
-        function updateBoardEmptyState() {
-            const hint = document.getElementById('empty-board-hint');
-            if (state.items.length > 0 || state.vectors.length > 0 || state.template !== 'blank') {
-                hint.classList.add('hidden');
-            } else {
-                hint.classList.remove('hidden');
-            }
-        }
-
-        function showToast(message, type = 'info') {
-            const box = document.getElementById('toast-box');
-            const toast = document.createElement('div');
-            const colors = {
-                info: 'bg-slate-800 text-white',
-                success: 'bg-emerald-600 text-white',
-                error: 'bg-rose-600 text-white'
-            };
             toast.className = `${colors[type] || colors.info} px-4 py-2.5 rounded-2xl shadow-lg text-xs sm:text-sm font-bold transition-all duration-300`;
             toast.textContent = message;
             box.appendChild(toast);
