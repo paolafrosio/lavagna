@@ -253,107 +253,107 @@
             </button>
         </aside>
 
-        <!-- BARRA CONTESTUALE STRUMENTO ATTIVO -->
-        <div id="context-tool-bar" class="hidden absolute top-3 left-1/2 -translate-x-1/2 z-20 bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl shadow-lg px-3 py-2 flex flex-wrap items-center gap-2 max-w-[92vw]">
-            <!-- Opzioni colore e spessore tratto (Matita, Forme, Freccia, Compasso) -->
-            <div id="stroke-picker-bar" class="hidden flex items-center gap-2">
-                <div id="default-stroke-colors" class="flex items-center gap-1">
-                    <button type="button" data-scolor="indigo" onclick="selectStrokeColor('indigo')" class="scolor-btn w-6 h-6 rounded-full bg-indigo-600 border-2 border-slate-900 scale-110 cursor-pointer"></button>
-                    <button type="button" data-scolor="rose" onclick="selectStrokeColor('rose')" class="scolor-btn w-6 h-6 rounded-full bg-rose-600 border-2 border-transparent cursor-pointer"></button>
-                    <button type="button" data-scolor="emerald" onclick="selectStrokeColor('emerald')" class="scolor-btn w-6 h-6 rounded-full bg-emerald-600 border-2 border-transparent cursor-pointer"></button>
-                    <button type="button" data-scolor="slate" onclick="selectStrokeColor('slate')" class="scolor-btn w-6 h-6 rounded-full bg-slate-700 border-2 border-transparent cursor-pointer"></button>
-                </div>
-                <div id="default-stroke-divider" class="h-5 w-px bg-slate-200"></div>
-                <div class="flex items-center gap-1">
-                    <button type="button" data-swidth="2" onclick="selectStrokeWidth(2)" class="swidth-btn w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center cursor-pointer"><span class="w-2 h-2 rounded-full bg-current"></span></button>
-                    <button type="button" data-swidth="3" onclick="selectStrokeWidth(3)" class="swidth-btn w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 ring-2 ring-indigo-500 flex items-center justify-center cursor-pointer"><span class="w-3 h-3 rounded-full bg-current"></span></button>
-                    <button type="button" data-swidth="6" onclick="selectStrokeWidth(6)" class="swidth-btn w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center cursor-pointer"><span class="w-4 h-4 rounded-full bg-current"></span></button>
-                </div>
-            </div>
+        <!-- COLONNA LAVAGNA E BARRA CONTESTUALE -->
+        <div class="flex-1 flex flex-col min-w-0 overflow-hidden relative">
 
-            <!-- Opzioni Compasso -->
-            <div id="compass-tool-hint" class="hidden flex flex-wrap items-center gap-2 pl-2 border-l border-slate-200">
-                <div class="flex items-center gap-1" title="Scegli colore compasso">
-                    <button type="button" data-ccolor="indigo" onclick="selectCompassColor('indigo')" title="Blu indaco" class="ccolor-btn w-5 h-5 rounded-full bg-indigo-600 border-2 border-slate-900 scale-110 cursor-pointer transition-transform"></button>
-                    <button type="button" data-ccolor="sky" onclick="selectCompassColor('sky')" title="Azzurro" class="ccolor-btn w-5 h-5 rounded-full bg-sky-600 border-2 border-transparent cursor-pointer transition-transform"></button>
-                    <button type="button" data-ccolor="teal" onclick="selectCompassColor('teal')" title="Turchese" class="ccolor-btn w-5 h-5 rounded-full bg-teal-600 border-2 border-transparent cursor-pointer transition-transform"></button>
-                    <button type="button" data-ccolor="emerald" onclick="selectCompassColor('emerald')" title="Verde" class="ccolor-btn w-5 h-5 rounded-full bg-emerald-600 border-2 border-transparent cursor-pointer transition-transform"></button>
-                    <button type="button" data-ccolor="amber" onclick="selectCompassColor('amber')" title="Giallo ambra" class="ccolor-btn w-5 h-5 rounded-full bg-amber-500 border-2 border-transparent cursor-pointer transition-transform"></button>
-                    <button type="button" data-ccolor="orange" onclick="selectCompassColor('orange')" title="Arancione" class="ccolor-btn w-5 h-5 rounded-full bg-orange-600 border-2 border-transparent cursor-pointer transition-transform"></button>
-                    <button type="button" data-ccolor="rose" onclick="selectCompassColor('rose')" title="Rosso" class="ccolor-btn w-5 h-5 rounded-full bg-rose-600 border-2 border-transparent cursor-pointer transition-transform"></button>
-                    <button type="button" data-ccolor="fuchsia" onclick="selectCompassColor('fuchsia')" title="Fucsia" class="ccolor-btn w-5 h-5 rounded-full bg-fuchsia-600 border-2 border-transparent cursor-pointer transition-transform"></button>
-                    <button type="button" data-ccolor="purple" onclick="selectCompassColor('purple')" title="Viola" class="ccolor-btn w-5 h-5 rounded-full bg-purple-600 border-2 border-transparent cursor-pointer transition-transform"></button>
-                    <button type="button" data-ccolor="slate" onclick="selectCompassColor('slate')" title="Nero / Ardesia" class="ccolor-btn w-5 h-5 rounded-full bg-slate-700 border-2 border-transparent cursor-pointer transition-transform"></button>
+            <!-- BARRA CONTESTUALE STRUMENTO ATTIVO -->
+            <div id="context-tool-bar" class="hidden z-30 bg-white border-b border-slate-200 shadow-xs px-3 py-1.5 flex flex-wrap items-center justify-center gap-2 shrink-0">
+                <!-- Opzioni colore e spessore tratto (Matita, Forme, Freccia, Compasso) -->
+                <div id="stroke-picker-bar" class="hidden flex items-center gap-2">
+                    <div id="default-stroke-colors" class="flex items-center gap-1">
+                        <button type="button" data-scolor="indigo" onclick="selectStrokeColor('indigo')" class="scolor-btn w-6 h-6 rounded-full bg-indigo-600 border-2 border-slate-900 scale-110 cursor-pointer"></button>
+                        <button type="button" data-scolor="rose" onclick="selectStrokeColor('rose')" class="scolor-btn w-6 h-6 rounded-full bg-rose-600 border-2 border-transparent cursor-pointer"></button>
+                        <button type="button" data-scolor="emerald" onclick="selectStrokeColor('emerald')" class="scolor-btn w-6 h-6 rounded-full bg-emerald-600 border-2 border-transparent cursor-pointer"></button>
+                        <button type="button" data-scolor="slate" onclick="selectStrokeColor('slate')" class="scolor-btn w-6 h-6 rounded-full bg-slate-700 border-2 border-transparent cursor-pointer"></button>
+                    </div>
+                    <div id="default-stroke-divider" class="h-5 w-px bg-slate-200"></div>
+                    <div class="flex items-center gap-1">
+                        <button type="button" data-swidth="2" onclick="selectStrokeWidth(2)" class="swidth-btn w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center cursor-pointer"><span class="w-2 h-2 rounded-full bg-current"></span></button>
+                        <button type="button" data-swidth="3" onclick="selectStrokeWidth(3)" class="swidth-btn w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 ring-2 ring-indigo-500 flex items-center justify-center cursor-pointer"><span class="w-3 h-3 rounded-full bg-current"></span></button>
+                        <button type="button" data-swidth="6" onclick="selectStrokeWidth(6)" class="swidth-btn w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center cursor-pointer"><span class="w-4 h-4 rounded-full bg-current"></span></button>
+                    </div>
                 </div>
-                <div class="h-5 w-px bg-slate-200"></div>
-                <span id="compass-readout" class="text-xs font-bold text-slate-700 whitespace-nowrap">Raggio: 140px • Angolo: 0°</span>
-                <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
-                    <button type="button" id="btn-compass-snap" onclick="toggleCompassSnap()"
-                        class="px-2 py-0.5 rounded-lg bg-slate-200 text-slate-600 text-xs font-bold cursor-pointer whitespace-nowrap transition-colors">
-                        Snap: OFF
+
+                <!-- Opzioni Compasso -->
+                <div id="compass-tool-hint" class="hidden flex flex-wrap items-center gap-2 pl-2 border-l border-slate-200">
+                    <div class="flex items-center gap-1" title="Scegli colore compasso">
+                        <button type="button" data-ccolor="indigo" onclick="selectCompassColor('indigo')" title="Blu indaco" class="ccolor-btn w-5 h-5 rounded-full bg-indigo-600 border-2 border-slate-900 scale-110 cursor-pointer transition-transform"></button>
+                        <button type="button" data-ccolor="sky" onclick="selectCompassColor('sky')" title="Azzurro" class="ccolor-btn w-5 h-5 rounded-full bg-sky-600 border-2 border-transparent cursor-pointer transition-transform"></button>
+                        <button type="button" data-ccolor="teal" onclick="selectCompassColor('teal')" title="Turchese" class="ccolor-btn w-5 h-5 rounded-full bg-teal-600 border-2 border-transparent cursor-pointer transition-transform"></button>
+                        <button type="button" data-ccolor="emerald" onclick="selectCompassColor('emerald')" title="Verde" class="ccolor-btn w-5 h-5 rounded-full bg-emerald-600 border-2 border-transparent cursor-pointer transition-transform"></button>
+                        <button type="button" data-ccolor="amber" onclick="selectCompassColor('amber')" title="Giallo ambra" class="ccolor-btn w-5 h-5 rounded-full bg-amber-500 border-2 border-transparent cursor-pointer transition-transform"></button>
+                        <button type="button" data-ccolor="orange" onclick="selectCompassColor('orange')" title="Arancione" class="ccolor-btn w-5 h-5 rounded-full bg-orange-600 border-2 border-transparent cursor-pointer transition-transform"></button>
+                        <button type="button" data-ccolor="rose" onclick="selectCompassColor('rose')" title="Rosso" class="ccolor-btn w-5 h-5 rounded-full bg-rose-600 border-2 border-transparent cursor-pointer transition-transform"></button>
+                        <button type="button" data-ccolor="fuchsia" onclick="selectCompassColor('fuchsia')" title="Fucsia" class="ccolor-btn w-5 h-5 rounded-full bg-fuchsia-600 border-2 border-transparent cursor-pointer transition-transform"></button>
+                        <button type="button" data-ccolor="purple" onclick="selectCompassColor('purple')" title="Viola" class="ccolor-btn w-5 h-5 rounded-full bg-purple-600 border-2 border-transparent cursor-pointer transition-transform"></button>
+                        <button type="button" data-ccolor="slate" onclick="selectCompassColor('slate')" title="Nero / Ardesia" class="ccolor-btn w-5 h-5 rounded-full bg-slate-700 border-2 border-transparent cursor-pointer transition-transform"></button>
+                    </div>
+                    <div class="h-5 w-px bg-slate-200"></div>
+                    <span id="compass-readout" class="text-xs font-bold text-slate-700 whitespace-nowrap">R: 140px • 0°</span>
+                    <label class="flex items-center gap-1.5 bg-slate-100 px-2 py-1 rounded-xl text-xs font-bold text-slate-700 whitespace-nowrap">
+                        <span>Snap raggio:</span>
+                        <select id="compass-radius-snap-step" onchange="setCompassRadiusSnapStep(this.value)" title="Scegli lo snap del raggio in pixel"
+                            class="bg-white border border-slate-200 rounded-lg px-1.5 py-0.5 text-xs font-extrabold text-indigo-700 outline-none cursor-pointer">
+                            <option value="1">1</option>
+                            <option value="5">5</option>
+                            <option value="10">10</option>
+                            <option value="20">20</option>
+                            <option value="28" selected>28</option>
+                            <option value="30">30</option>
+                            <option value="50">50</option>
+                        </select>
+                    </label>
+                    <button type="button" onclick="drawFullCompassCircle()"
+                        class="px-2.5 py-1 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold cursor-pointer whitespace-nowrap shadow-xs">
+                        Cerchio completo
                     </button>
-                    <select id="compass-radius-snap-step" onchange="setCompassRadiusSnapStep(this.value)" title="Passo di snap del raggio"
-                        class="bg-white border border-slate-200 rounded-lg px-1.5 py-0.5 text-xs font-bold text-slate-700 outline-none cursor-pointer">
-                        <option value="14">R: ½ quad. (14px)</option>
-                        <option value="28" selected>R: 1 quad. (28px)</option>
-                        <option value="56">R: 2 quad. (56px)</option>
-                        <option value="84">R: 3 quad. (84px)</option>
-                    </select>
-                    <select id="compass-snap-step" onchange="setCompassSnapStep(this.value)" title="Scegli il passo di snap in gradi"
-                        class="bg-white border border-slate-200 rounded-lg px-1.5 py-0.5 text-xs font-bold text-slate-700 outline-none cursor-pointer">
-                        <option value="5">∠ 5°</option>
-                        <option value="15" selected>∠ 15°</option>
-                        <option value="30">∠ 30°</option>
-                        <option value="45">∠ 45°</option>
-                        <option value="90">∠ 90°</option>
-                    </select>
+                    <button type="button" onclick="setActiveTool('select')"
+                        class="px-2 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer">
+                        Chiudi
+                    </button>
                 </div>
-                <button type="button" onclick="drawFullCompassCircle()"
-                    class="px-2.5 py-1 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold cursor-pointer whitespace-nowrap shadow-xs">
-                    Cerchio completo
-                </button>
-                <button type="button" onclick="setActiveTool('select')"
-                    class="px-2 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer">
-                    Chiudi
-                </button>
+
+                <!-- Sotto-scelta Forme -->
+                <div id="shape-subpicker" class="hidden flex items-center gap-1 pl-2 border-l border-slate-200">
+                    <button type="button" data-shapetype="rect" onclick="selectShapeType('rect')" title="Rettangolo" class="shapetype-btn w-9 h-9 rounded-xl flex items-center justify-center bg-indigo-100 text-indigo-700 ring-2 ring-indigo-500 cursor-pointer"><i data-lucide="square" class="w-4 h-4"></i></button>
+                    <button type="button" data-shapetype="circle" onclick="selectShapeType('circle')" title="Cerchio / Ellisse" class="shapetype-btn w-9 h-9 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 cursor-pointer"><i data-lucide="circle" class="w-4 h-4"></i></button>
+                    <button type="button" data-shapetype="triangle" onclick="selectShapeType('triangle')" title="Triangolo" class="shapetype-btn w-9 h-9 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 cursor-pointer"><i data-lucide="triangle" class="w-4 h-4"></i></button>
+                    <button type="button" data-shapetype="diamond" onclick="selectShapeType('diamond')" title="Rombo" class="shapetype-btn w-9 h-9 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 cursor-pointer"><i data-lucide="diamond" class="w-4 h-4"></i></button>
+                    <button type="button" data-shapetype="hexagon" onclick="selectShapeType('hexagon')" title="Esagono" class="shapetype-btn w-9 h-9 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 cursor-pointer"><i data-lucide="hexagon" class="w-4 h-4"></i></button>
+                </div>
+
+                <!-- Evidenziatore -->
+                <div id="highlighter-picker-bar" class="hidden flex items-center gap-1.5">
+                    <button type="button" data-hlcolor="hl_yellow" onclick="selectHighlighterColor('hl_yellow')" class="hlcolor-btn w-6 h-6 rounded-full bg-yellow-300 border-2 border-slate-900 scale-110 cursor-pointer"></button>
+                    <button type="button" data-hlcolor="hl_green" onclick="selectHighlighterColor('hl_green')" class="hlcolor-btn w-6 h-6 rounded-full bg-lime-300 border-2 border-transparent cursor-pointer"></button>
+                    <button type="button" data-hlcolor="hl_cyan" onclick="selectHighlighterColor('hl_cyan')" class="hlcolor-btn w-6 h-6 rounded-full bg-cyan-300 border-2 border-transparent cursor-pointer"></button>
+                    <button type="button" data-hlcolor="hl_pink" onclick="selectHighlighterColor('hl_pink')" class="hlcolor-btn w-6 h-6 rounded-full bg-pink-300 border-2 border-transparent cursor-pointer"></button>
+                </div>
+
+                <!-- Timbri -->
+                <div id="stamp-picker-bar" class="hidden flex items-center gap-1">
+                    <button type="button" data-stamp="✅" onclick="selectStamp('✅')" class="stamp-choice text-lg p-1 rounded-lg bg-indigo-100 ring-2 ring-indigo-500 cursor-pointer">✅</button>
+                    <button type="button" data-stamp="⭐" onclick="selectStamp('⭐')" class="stamp-choice text-lg p-1 rounded-lg hover:bg-slate-100 cursor-pointer">⭐</button>
+                    <button type="button" data-stamp="❓" onclick="selectStamp('❓')" class="stamp-choice text-lg p-1 rounded-lg hover:bg-slate-100 cursor-pointer">❓</button>
+                    <button type="button" data-stamp="💡" onclick="selectStamp('💡')" class="stamp-choice text-lg p-1 rounded-lg hover:bg-slate-100 cursor-pointer">💡</button>
+                    <button type="button" data-stamp="👏" onclick="selectStamp('👏')" class="stamp-choice text-lg p-1 rounded-lg hover:bg-slate-100 cursor-pointer">👏</button>
+                    <button type="button" data-stamp="❤️" onclick="selectStamp('❤️')" class="stamp-choice text-lg p-1 rounded-lg hover:bg-slate-100 cursor-pointer">❤️</button>
+                </div>
+
+                <!-- Suggerimento Testo / Laser -->
+                <div id="text-tool-hint" class="hidden text-xs font-bold text-slate-700 px-1">Clicca in un punto della lavagna per inserire il testo</div>
+                <div id="laser-tool-hint" class="hidden text-xs font-bold text-rose-600 px-1">Muovi il cursore sulla lavagna per indicare alla classe</div>
+
+                <!-- Gomma -->
+                <div id="eraser-picker-bar" class="hidden flex items-center gap-2">
+                    <button type="button" onclick="undoLastVector()" class="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700 cursor-pointer">Annulla ultimo</button>
+                    <button type="button" onclick="clearAllVectors()" class="px-2.5 py-1 rounded-xl bg-rose-100 hover:bg-rose-200 text-xs font-bold text-rose-700 cursor-pointer">Cancella disegni</button>
+                    <div id="eraser-list-chips" class="flex items-center gap-1 max-w-xs overflow-x-auto no-scrollbar"></div>
+                </div>
             </div>
 
-            <!-- Sotto-scelta Forme -->
-            <div id="shape-subpicker" class="hidden flex items-center gap-1 pl-2 border-l border-slate-200">
-                <button type="button" data-shapetype="rect" onclick="selectShapeType('rect')" title="Rettangolo" class="shapetype-btn w-9 h-9 rounded-xl flex items-center justify-center bg-indigo-100 text-indigo-700 ring-2 ring-indigo-500 cursor-pointer"><i data-lucide="square" class="w-4 h-4"></i></button>
-                <button type="button" data-shapetype="circle" onclick="selectShapeType('circle')" title="Cerchio / Ellisse" class="shapetype-btn w-9 h-9 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 cursor-pointer"><i data-lucide="circle" class="w-4 h-4"></i></button>
-                <button type="button" data-shapetype="triangle" onclick="selectShapeType('triangle')" title="Triangolo" class="shapetype-btn w-9 h-9 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 cursor-pointer"><i data-lucide="triangle" class="w-4 h-4"></i></button>
-                <button type="button" data-shapetype="diamond" onclick="selectShapeType('diamond')" title="Rombo" class="shapetype-btn w-9 h-9 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 cursor-pointer"><i data-lucide="diamond" class="w-4 h-4"></i></button>
-                <button type="button" data-shapetype="hexagon" onclick="selectShapeType('hexagon')" title="Esagono" class="shapetype-btn w-9 h-9 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 cursor-pointer"><i data-lucide="hexagon" class="w-4 h-4"></i></button>
-            </div>
-
-            <!-- Evidenziatore -->
-            <div id="highlighter-picker-bar" class="hidden flex items-center gap-1.5">
-                <button type="button" data-hlcolor="hl_yellow" onclick="selectHighlighterColor('hl_yellow')" class="hlcolor-btn w-6 h-6 rounded-full bg-yellow-300 border-2 border-slate-900 scale-110 cursor-pointer"></button>
-                <button type="button" data-hlcolor="hl_green" onclick="selectHighlighterColor('hl_green')" class="hlcolor-btn w-6 h-6 rounded-full bg-lime-300 border-2 border-transparent cursor-pointer"></button>
-                <button type="button" data-hlcolor="hl_cyan" onclick="selectHighlighterColor('hl_cyan')" class="hlcolor-btn w-6 h-6 rounded-full bg-cyan-300 border-2 border-transparent cursor-pointer"></button>
-                <button type="button" data-hlcolor="hl_pink" onclick="selectHighlighterColor('hl_pink')" class="hlcolor-btn w-6 h-6 rounded-full bg-pink-300 border-2 border-transparent cursor-pointer"></button>
-            </div>
-
-            <!-- Timbri -->
-            <div id="stamp-picker-bar" class="hidden flex items-center gap-1">
-                <button type="button" data-stamp="✅" onclick="selectStamp('✅')" class="stamp-choice text-lg p-1 rounded-lg bg-indigo-100 ring-2 ring-indigo-500 cursor-pointer">✅</button>
-                <button type="button" data-stamp="⭐" onclick="selectStamp('⭐')" class="stamp-choice text-lg p-1 rounded-lg hover:bg-slate-100 cursor-pointer">⭐</button>
-                <button type="button" data-stamp="❓" onclick="selectStamp('❓')" class="stamp-choice text-lg p-1 rounded-lg hover:bg-slate-100 cursor-pointer">❓</button>
-                <button type="button" data-stamp="💡" onclick="selectStamp('💡')" class="stamp-choice text-lg p-1 rounded-lg hover:bg-slate-100 cursor-pointer">💡</button>
-                <button type="button" data-stamp="👏" onclick="selectStamp('👏')" class="stamp-choice text-lg p-1 rounded-lg hover:bg-slate-100 cursor-pointer">👏</button>
-                <button type="button" data-stamp="❤️" onclick="selectStamp('❤️')" class="stamp-choice text-lg p-1 rounded-lg hover:bg-slate-100 cursor-pointer">❤️</button>
-            </div>
-
-            <!-- Suggerimento Testo / Laser -->
-            <div id="text-tool-hint" class="hidden text-xs font-bold text-slate-700 px-1">Clicca in un punto della lavagna per inserire il testo</div>
-            <div id="laser-tool-hint" class="hidden text-xs font-bold text-rose-600 px-1">Muovi il cursore sulla lavagna per indicare alla classe</div>
-
-            <!-- Gomma -->
-            <div id="eraser-picker-bar" class="hidden flex items-center gap-2">
-                <button type="button" onclick="undoLastVector()" class="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700 cursor-pointer">Annulla ultimo</button>
-                <button type="button" onclick="clearAllVectors()" class="px-2.5 py-1 rounded-xl bg-rose-100 hover:bg-rose-200 text-xs font-bold text-rose-700 cursor-pointer">Cancella disegni</button>
-                <div id="eraser-list-chips" class="flex items-center gap-1 max-w-xs overflow-x-auto no-scrollbar"></div>
+            <!-- VIEWPORT LAVAGNA -->
+            <main id="board-viewport" class="flex-1 overflow-auto relative bg-slate-200/60">
             </div>
         </div>
 
@@ -392,7 +392,8 @@
                     </div>
                 </div>
             </div>
-        </main>
+            </main>
+        </div>
 
         <!-- PULSANTE REGIA DOCENTE IN BASSO A SINISTRA -->
         <button type="button" id="btn-open-teacher-panel" onclick="toggleTeacherPanel()"
@@ -1601,8 +1602,6 @@
             cy: 350,
             radius: 140,
             angle: 0,
-            snapEnabled: false,
-            snapStepDeg: 15,
             radiusSnapStep: 28,
             isDraggingCenter: false,
             isDraggingRadius: false,
@@ -1625,7 +1624,7 @@
         }
 
         function snapCompassCenterToGrid(x, y) {
-            if (!compassState.snapEnabled) {
+            if (compassState.radiusSnapStep !== GRID_STEP) {
                 return clampCoordsToStudentZone(x, y, 20, 20);
             }
             const gx = GRID_DOT_OFFSET + Math.round((x - GRID_DOT_OFFSET) / GRID_STEP) * GRID_STEP;
@@ -1636,56 +1635,29 @@
             return { x: finalX, y: finalY };
         }
 
-        function toggleCompassSnap() {
-            compassState.snapEnabled = !compassState.snapEnabled;
-            const btn = document.getElementById('btn-compass-snap');
-            if (btn) {
-                if (compassState.snapEnabled) {
-                    btn.textContent = 'Snap: ON';
-                    btn.className = 'px-2 py-0.5 rounded-lg bg-indigo-600 text-white text-xs font-bold cursor-pointer whitespace-nowrap transition-colors shadow-2xs';
-                } else {
-                    btn.textContent = 'Snap: OFF';
-                    btn.className = 'px-2 py-0.5 rounded-lg bg-slate-200 text-slate-600 text-xs font-bold cursor-pointer whitespace-nowrap transition-colors';
-                }
-            }
-            if (compassState.snapEnabled) {
+        function setCompassRadiusSnapStep(val) {
+            compassState.radiusSnapStep = Math.max(1, parseInt(val, 10) || 1);
+            if (compassState.radiusSnapStep === GRID_STEP) {
                 const snappedCenter = snapCompassCenterToGrid(compassState.cx, compassState.cy);
                 compassState.cx = snappedCenter.x;
                 compassState.cy = snappedCenter.y;
-                compassState.radius = applyCompassRadiusSnap(compassState.radius);
-                compassState.angle = applyCompassAngleSnap(compassState.angle);
             }
+            compassState.radius = applyCompassRadiusSnap(compassState.radius);
             renderCompassOverlay();
         }
 
-        function setCompassRadiusSnapStep(val) {
-            compassState.radiusSnapStep = Math.max(7, parseInt(val, 10) || 28);
-            if (compassState.snapEnabled) {
-                compassState.radius = applyCompassRadiusSnap(compassState.radius);
-                renderCompassOverlay();
-            }
-        }
-
-        function setCompassSnapStep(val) {
-            compassState.snapStepDeg = Math.max(1, parseInt(val, 10) || 15);
-            if (compassState.snapEnabled) {
-                compassState.angle = applyCompassAngleSnap(compassState.angle);
-                renderCompassOverlay();
-            }
-        }
-
-        function applyCompassAngleSnap(rad) {
-            if (!compassState.snapEnabled) return rad;
-            const stepRad = (compassState.snapStepDeg * Math.PI) / 180;
+        function applyCompassAngleSnap(rad, snapAngle = false) {
+            if (!snapAngle) return rad;
+            const stepRad = (15 * Math.PI) / 180;
             return Math.round(rad / stepRad) * stepRad;
         }
 
-        function applyCompassRadiusSnap(radPx, forceSnap = false) {
-            const step = compassState.radiusSnapStep || GRID_STEP;
-            const minR = (compassState.snapEnabled || forceSnap) ? step : 14;
+        function applyCompassRadiusSnap(radPx) {
+            const step = compassState.radiusSnapStep || 1;
+            const minR = Math.max(10, step);
             const clamped = Math.max(minR, Math.min(756, radPx));
-            if (!compassState.snapEnabled && !forceSnap) return Math.round(clamped);
-            return Math.max(step, Math.min(756, Math.round(clamped / step) * step));
+            if (step <= 1) return Math.round(clamped);
+            return Math.max(minR, Math.min(756, Math.round(clamped / step) * step));
         }
 
         function toggleCompassOverlay(show) {
@@ -1746,13 +1718,12 @@
 
             const readout = document.getElementById('compass-readout');
             if (readout) {
-                const gridUnits = (radius / GRID_STEP).toFixed(radius % GRID_STEP === 0 ? 0 : 1);
-                readout.textContent = `Raggio: ${Math.round(radius)}px (${gridUnits} quad.) • Angolo: ${deg}°`;
+                readout.textContent = `R: ${Math.round(radius)}px • ${deg}°`;
             }
 
             let radiusSnapTicksSvg = '';
-            if (compassState.snapEnabled) {
-                const step = compassState.radiusSnapStep || GRID_STEP;
+            const step = compassState.radiusSnapStep || 1;
+            if (step >= 10) {
                 for (let d = step; d <= radius; d += step) {
                     const tx = Math.round(cx + Math.cos(angle) * d);
                     const ty = Math.round(cy + Math.sin(angle) * d);
@@ -1800,8 +1771,8 @@
                     </g>
 
                     <g transform="translate(${radHandleX}, ${radHandleY - 24})">
-                        <rect x="-32" y="-11" width="64" height="20" rx="10" fill="${compassState.snapEnabled ? '#312e81' : '#0f172a'}" opacity="0.9" />
-                        <text x="0" y="3" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="bold" font-family="Inter, sans-serif">${Math.round(radius)} px${compassState.snapEnabled ? ' •' : ''}</text>
+                        <rect x="-32" y="-11" width="64" height="20" rx="10" fill="${step > 1 ? '#312e81' : '#0f172a'}" opacity="0.9" />
+                        <text x="0" y="3" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="bold" font-family="Inter, sans-serif">${Math.round(radius)} px</text>
                     </g>
                 </svg>
 
@@ -1880,8 +1851,8 @@
                 const dx = pt.x - compassState.cx;
                 const dy = pt.y - compassState.cy;
                 const rawR = Math.hypot(dx, dy) / 0.55;
-                compassState.radius = applyCompassRadiusSnap(rawR, Boolean(e.shiftKey));
-                compassState.angle = applyCompassAngleSnap(Math.atan2(dy, dx));
+                compassState.radius = applyCompassRadiusSnap(rawR);
+                compassState.angle = applyCompassAngleSnap(Math.atan2(dy, dx), Boolean(e.shiftKey));
                 renderCompassOverlay();
             };
             const onEnd = () => {
@@ -1919,7 +1890,7 @@
                 const dy = pt.y - compassState.cy;
                 if (Math.hypot(dx, dy) < 8) return;
 
-                const newAngle = applyCompassAngleSnap(Math.atan2(dy, dx));
+                const newAngle = applyCompassAngleSnap(Math.atan2(dy, dx), Boolean(e.shiftKey));
                 let delta = newAngle - lastAngle;
                 while (delta > Math.PI) delta -= Math.PI * 2;
                 while (delta < -Math.PI) delta += Math.PI * 2;
@@ -3552,7 +3523,7 @@
                 const theme = SECTION_COLOR_THEMES[colorKey] || SECTION_COLOR_THEMES.slate;
                 return `
                     <div onclick="event.stopPropagation(); openSectionModal('${key}')" title="${state.role === 'teacher' ? 'Clicca per modificare titolo e colore' : ''}"
-                        class="section-title-box relative z-20 ${editHint} inline-flex items-center gap-1.5 ${theme.header} font-extrabold text-sm sm:text-base uppercase tracking-wider px-3 py-1.5 rounded-xl mb-3 transition-all">
+                        class="section-title-box relative z-10 ${editHint} inline-flex items-center gap-1.5 ${theme.header} font-extrabold text-sm sm:text-base uppercase tracking-wider px-3 py-1.5 rounded-xl mb-3 transition-all">
                         <span>${escapeHtml(t[key] || '')}</span>
                         ${state.role === 'teacher' ? '<i data-lucide="pencil" class="w-3.5 h-3.5 opacity-60 pointer-events-none"></i>' : ''}
                     </div>
