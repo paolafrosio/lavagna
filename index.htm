@@ -257,13 +257,13 @@
         <div id="context-tool-bar" class="hidden absolute top-3 left-1/2 -translate-x-1/2 z-20 bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl shadow-lg px-3 py-2 flex flex-wrap items-center gap-2 max-w-[92vw]">
             <!-- Opzioni colore e spessore tratto (Matita, Forme, Freccia, Compasso) -->
             <div id="stroke-picker-bar" class="hidden flex items-center gap-2">
-                <div class="flex items-center gap-1">
+                <div id="default-stroke-colors" class="flex items-center gap-1">
                     <button type="button" data-scolor="indigo" onclick="selectStrokeColor('indigo')" class="scolor-btn w-6 h-6 rounded-full bg-indigo-600 border-2 border-slate-900 scale-110 cursor-pointer"></button>
                     <button type="button" data-scolor="rose" onclick="selectStrokeColor('rose')" class="scolor-btn w-6 h-6 rounded-full bg-rose-600 border-2 border-transparent cursor-pointer"></button>
                     <button type="button" data-scolor="emerald" onclick="selectStrokeColor('emerald')" class="scolor-btn w-6 h-6 rounded-full bg-emerald-600 border-2 border-transparent cursor-pointer"></button>
                     <button type="button" data-scolor="slate" onclick="selectStrokeColor('slate')" class="scolor-btn w-6 h-6 rounded-full bg-slate-700 border-2 border-transparent cursor-pointer"></button>
                 </div>
-                <div class="h-5 w-px bg-slate-200"></div>
+                <div id="default-stroke-divider" class="h-5 w-px bg-slate-200"></div>
                 <div class="flex items-center gap-1">
                     <button type="button" data-swidth="2" onclick="selectStrokeWidth(2)" class="swidth-btn w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center cursor-pointer"><span class="w-2 h-2 rounded-full bg-current"></span></button>
                     <button type="button" data-swidth="3" onclick="selectStrokeWidth(3)" class="swidth-btn w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 ring-2 ring-indigo-500 flex items-center justify-center cursor-pointer"><span class="w-3 h-3 rounded-full bg-current"></span></button>
@@ -272,20 +272,40 @@
             </div>
 
             <!-- Opzioni Compasso -->
-            <div id="compass-tool-hint" class="hidden flex items-center gap-2 pl-2 border-l border-slate-200">
+            <div id="compass-tool-hint" class="hidden flex flex-wrap items-center gap-2 pl-2 border-l border-slate-200">
+                <div class="flex items-center gap-1" title="Scegli colore compasso">
+                    <button type="button" data-ccolor="indigo" onclick="selectCompassColor('indigo')" title="Blu indaco" class="ccolor-btn w-5 h-5 rounded-full bg-indigo-600 border-2 border-slate-900 scale-110 cursor-pointer transition-transform"></button>
+                    <button type="button" data-ccolor="sky" onclick="selectCompassColor('sky')" title="Azzurro" class="ccolor-btn w-5 h-5 rounded-full bg-sky-600 border-2 border-transparent cursor-pointer transition-transform"></button>
+                    <button type="button" data-ccolor="teal" onclick="selectCompassColor('teal')" title="Turchese" class="ccolor-btn w-5 h-5 rounded-full bg-teal-600 border-2 border-transparent cursor-pointer transition-transform"></button>
+                    <button type="button" data-ccolor="emerald" onclick="selectCompassColor('emerald')" title="Verde" class="ccolor-btn w-5 h-5 rounded-full bg-emerald-600 border-2 border-transparent cursor-pointer transition-transform"></button>
+                    <button type="button" data-ccolor="amber" onclick="selectCompassColor('amber')" title="Giallo ambra" class="ccolor-btn w-5 h-5 rounded-full bg-amber-500 border-2 border-transparent cursor-pointer transition-transform"></button>
+                    <button type="button" data-ccolor="orange" onclick="selectCompassColor('orange')" title="Arancione" class="ccolor-btn w-5 h-5 rounded-full bg-orange-600 border-2 border-transparent cursor-pointer transition-transform"></button>
+                    <button type="button" data-ccolor="rose" onclick="selectCompassColor('rose')" title="Rosso" class="ccolor-btn w-5 h-5 rounded-full bg-rose-600 border-2 border-transparent cursor-pointer transition-transform"></button>
+                    <button type="button" data-ccolor="fuchsia" onclick="selectCompassColor('fuchsia')" title="Fucsia" class="ccolor-btn w-5 h-5 rounded-full bg-fuchsia-600 border-2 border-transparent cursor-pointer transition-transform"></button>
+                    <button type="button" data-ccolor="purple" onclick="selectCompassColor('purple')" title="Viola" class="ccolor-btn w-5 h-5 rounded-full bg-purple-600 border-2 border-transparent cursor-pointer transition-transform"></button>
+                    <button type="button" data-ccolor="slate" onclick="selectCompassColor('slate')" title="Nero / Ardesia" class="ccolor-btn w-5 h-5 rounded-full bg-slate-700 border-2 border-transparent cursor-pointer transition-transform"></button>
+                </div>
+                <div class="h-5 w-px bg-slate-200"></div>
                 <span id="compass-readout" class="text-xs font-bold text-slate-700 whitespace-nowrap">Raggio: 140px • Angolo: 0°</span>
                 <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
                     <button type="button" id="btn-compass-snap" onclick="toggleCompassSnap()"
                         class="px-2 py-0.5 rounded-lg bg-slate-200 text-slate-600 text-xs font-bold cursor-pointer whitespace-nowrap transition-colors">
                         Snap: OFF
                     </button>
+                    <select id="compass-radius-snap-step" onchange="setCompassRadiusSnapStep(this.value)" title="Passo di snap del raggio"
+                        class="bg-white border border-slate-200 rounded-lg px-1.5 py-0.5 text-xs font-bold text-slate-700 outline-none cursor-pointer">
+                        <option value="14">R: ½ quad. (14px)</option>
+                        <option value="28" selected>R: 1 quad. (28px)</option>
+                        <option value="56">R: 2 quad. (56px)</option>
+                        <option value="84">R: 3 quad. (84px)</option>
+                    </select>
                     <select id="compass-snap-step" onchange="setCompassSnapStep(this.value)" title="Scegli il passo di snap in gradi"
                         class="bg-white border border-slate-200 rounded-lg px-1.5 py-0.5 text-xs font-bold text-slate-700 outline-none cursor-pointer">
-                        <option value="5">5°</option>
-                        <option value="15" selected>15°</option>
-                        <option value="30">30°</option>
-                        <option value="45">45°</option>
-                        <option value="90">90°</option>
+                        <option value="5">∠ 5°</option>
+                        <option value="15" selected>∠ 15°</option>
+                        <option value="30">∠ 30°</option>
+                        <option value="45">∠ 45°</option>
+                        <option value="90">∠ 90°</option>
                     </select>
                 </div>
                 <button type="button" onclick="drawFullCompassCircle()"
@@ -637,8 +657,14 @@
 
         const STROKE_HEX = {
             indigo: '#4f46e5',
-            rose: '#e11d48',
+            sky: '#0284c7',
+            teal: '#0d9488',
             emerald: '#059669',
+            amber: '#d97706',
+            orange: '#ea580c',
+            rose: '#e11d48',
+            fuchsia: '#c026d3',
+            purple: '#7c3aed',
             slate: '#334155',
             hl_yellow: '#fde047',
             hl_green: '#bef264',
@@ -1418,6 +1444,8 @@
             const contextBar = document.getElementById('context-tool-bar');
             const stampBar = document.getElementById('stamp-picker-bar');
             const strokeBar = document.getElementById('stroke-picker-bar');
+            const defaultStrokeColors = document.getElementById('default-stroke-colors');
+            const defaultStrokeDivider = document.getElementById('default-stroke-divider');
             const shapeSubpicker = document.getElementById('shape-subpicker');
             const eraserBar = document.getElementById('eraser-picker-bar');
             const hlBar = document.getElementById('highlighter-picker-bar');
@@ -1428,6 +1456,8 @@
             contextBar.classList.add('hidden');
             stampBar.classList.add('hidden');
             strokeBar.classList.add('hidden');
+            if (defaultStrokeColors) defaultStrokeColors.classList.remove('hidden');
+            if (defaultStrokeDivider) defaultStrokeDivider.classList.remove('hidden');
             if (shapeSubpicker) shapeSubpicker.classList.add('hidden');
             eraserBar.classList.add('hidden');
             if (hlBar) hlBar.classList.add('hidden');
@@ -1451,7 +1481,10 @@
             } else if (tool === 'compass') {
                 contextBar.classList.remove('hidden');
                 strokeBar.classList.remove('hidden');
+                if (defaultStrokeColors) defaultStrokeColors.classList.add('hidden');
+                if (defaultStrokeDivider) defaultStrokeDivider.classList.add('hidden');
                 if (compassHint) compassHint.classList.remove('hidden');
+                selectCompassColor(state.strokeColor);
             } else if (tool === 'text') {
                 contextBar.classList.remove('hidden');
                 if (textHint) textHint.classList.remove('hidden');
@@ -1469,6 +1502,9 @@
                 stampBar.classList.remove('hidden');
                 canvas.style.cursor = 'copy';
             } else if (tool === 'pen' || tool === 'arrow' || tool === 'shape') {
+                if (!['indigo', 'rose', 'emerald', 'slate'].includes(state.strokeColor)) {
+                    selectStrokeColor('indigo');
+                }
                 contextBar.classList.remove('hidden');
                 strokeBar.classList.remove('hidden');
                 if (tool === 'shape' && shapeSubpicker) {
@@ -1567,11 +1603,26 @@
             angle: 0,
             snapEnabled: false,
             snapStepDeg: 15,
+            radiusSnapStep: 28,
             isDraggingCenter: false,
             isDraggingRadius: false,
             isDraggingPencil: false,
             activeArc: null
         };
+
+        function selectCompassColor(color) {
+            state.strokeColor = STROKE_HEX[color] ? color : 'indigo';
+            document.querySelectorAll('.ccolor-btn').forEach(btn => {
+                if (btn.dataset.ccolor === state.strokeColor) {
+                    btn.classList.remove('border-transparent');
+                    btn.classList.add('border-slate-900', 'scale-110');
+                } else {
+                    btn.classList.add('border-transparent');
+                    btn.classList.remove('border-slate-900', 'scale-110');
+                }
+            });
+            if (state.activeTool === 'compass') renderCompassOverlay();
+        }
 
         function snapCompassCenterToGrid(x, y) {
             if (!compassState.snapEnabled) {
@@ -1603,6 +1654,14 @@
                 compassState.cy = snappedCenter.y;
                 compassState.radius = applyCompassRadiusSnap(compassState.radius);
                 compassState.angle = applyCompassAngleSnap(compassState.angle);
+            }
+            renderCompassOverlay();
+        }
+
+        function setCompassRadiusSnapStep(val) {
+            compassState.radiusSnapStep = Math.max(7, parseInt(val, 10) || 28);
+            if (compassState.snapEnabled) {
+                compassState.radius = applyCompassRadiusSnap(compassState.radius);
                 renderCompassOverlay();
             }
         }
@@ -1621,10 +1680,12 @@
             return Math.round(rad / stepRad) * stepRad;
         }
 
-        function applyCompassRadiusSnap(radPx) {
-            const clamped = Math.max(28, Math.min(756, radPx));
-            if (!compassState.snapEnabled) return Math.round(clamped);
-            return Math.max(GRID_STEP, Math.min(756, Math.round(clamped / GRID_STEP) * GRID_STEP));
+        function applyCompassRadiusSnap(radPx, forceSnap = false) {
+            const step = compassState.radiusSnapStep || GRID_STEP;
+            const minR = (compassState.snapEnabled || forceSnap) ? step : 14;
+            const clamped = Math.max(minR, Math.min(756, radPx));
+            if (!compassState.snapEnabled && !forceSnap) return Math.round(clamped);
+            return Math.max(step, Math.min(756, Math.round(clamped / step) * step));
         }
 
         function toggleCompassOverlay(show) {
@@ -1689,6 +1750,16 @@
                 readout.textContent = `Raggio: ${Math.round(radius)}px (${gridUnits} quad.) • Angolo: ${deg}°`;
             }
 
+            let radiusSnapTicksSvg = '';
+            if (compassState.snapEnabled) {
+                const step = compassState.radiusSnapStep || GRID_STEP;
+                for (let d = step; d <= radius; d += step) {
+                    const tx = Math.round(cx + Math.cos(angle) * d);
+                    const ty = Math.round(cy + Math.sin(angle) * d);
+                    radiusSnapTicksSvg += `<circle cx="${tx}" cy="${ty}" r="2.5" fill="${hex}" opacity="0.75" />`;
+                }
+            }
+
             layer.innerHTML = `
                 <svg class="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
                     <defs>
@@ -1704,6 +1775,7 @@
 
                     <circle cx="${cx}" cy="${cy}" r="${radius}" fill="none" stroke="${hex}" stroke-width="1.5" stroke-dasharray="6,6" opacity="0.5" shape-rendering="geometricPrecision" />
                     <line x1="${cx}" y1="${cy}" x2="${px}" y2="${py}" stroke="#64748b" stroke-width="1.5" stroke-dasharray="3,4" />
+                    ${radiusSnapTicksSvg}
 
                     <g filter="url(#compass-shadow)">
                         <line x1="${leftMidX}" y1="${leftMidY}" x2="${rightMidX}" y2="${rightMidY}" stroke="#64748b" stroke-width="3.5" />
@@ -1721,15 +1793,15 @@
                               stroke="url(#compass-metal)" stroke-width="9" stroke-linecap="round" />
 
                         <line x1="${apexX}" y1="${apexY}" x2="${handleTopX}" y2="${handleTopY}" stroke="#1e293b" stroke-width="8" stroke-linecap="round" />
-                        <circle cx="${handleTopX}" cy="${handleTopY}" r="5.5" fill="#4f46e5" stroke="#ffffff" stroke-width="2" />
+                        <circle cx="${handleTopX}" cy="${handleTopY}" r="5.5" fill="${hex}" stroke="#ffffff" stroke-width="2" />
 
                         <circle cx="${apexX}" cy="${apexY}" r="13" fill="#1e293b" stroke="#e2e8f0" stroke-width="2.5" />
                         <circle cx="${apexX}" cy="${apexY}" r="5" fill="#94a3b8" />
                     </g>
 
                     <g transform="translate(${radHandleX}, ${radHandleY - 24})">
-                        <rect x="-28" y="-11" width="56" height="20" rx="10" fill="#0f172a" opacity="0.88" />
-                        <text x="0" y="3" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="bold" font-family="Inter, sans-serif">${Math.round(radius)} px</text>
+                        <rect x="-32" y="-11" width="64" height="20" rx="10" fill="${compassState.snapEnabled ? '#312e81' : '#0f172a'}" opacity="0.9" />
+                        <text x="0" y="3" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="bold" font-family="Inter, sans-serif">${Math.round(radius)} px${compassState.snapEnabled ? ' •' : ''}</text>
                     </g>
                 </svg>
 
@@ -1808,7 +1880,7 @@
                 const dx = pt.x - compassState.cx;
                 const dy = pt.y - compassState.cy;
                 const rawR = Math.hypot(dx, dy) / 0.55;
-                compassState.radius = applyCompassRadiusSnap(rawR);
+                compassState.radius = applyCompassRadiusSnap(rawR, Boolean(e.shiftKey));
                 compassState.angle = applyCompassAngleSnap(Math.atan2(dy, dx));
                 renderCompassOverlay();
             };
