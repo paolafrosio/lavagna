@@ -2059,7 +2059,7 @@
 
                     // Dopo aver tracciato una forma o una freccia, torna subito al puntatore
                     // così puoi spostarla, ruotarla o cancellarla immediatamente
-                    if (createdType === 'shape' || createdType === 'arrow') {
+                    if (createdType === 'shape' || createdType === 'arrow' || createdType === 'pen') {
                         setActiveTool('select');
                     } else {
                         renderAllVectors();
@@ -2108,7 +2108,7 @@
             const hitSw = Math.max(28, sw + 24);
             const isHl = Boolean(vec.isHighlighter);
             const opacityAttr = isPreview ? 'opacity="0.65"' : (isHl ? 'opacity="0.45"' : '');
-            const deleteAttr = isPreview ? '' : `data-vec-id="${vec.id}" onpointerdown="eraseVectorById('${vec.id}', event)" onclick="eraseVectorById('${vec.id}', event)"`;
+            const deleteAttr = (isPreview || state.activeTool !== 'eraser') ? '' : `data-vec-id="${vec.id}" onpointerdown="eraseVectorById('${vec.id}', event)" onclick="eraseVectorById('${vec.id}', event)"`;
             const showEraseBadge = !isPreview && state.activeTool === 'eraser';
             const rot = Number(vec.rotation) || 0;
 
