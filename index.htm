@@ -315,12 +315,12 @@
                 </div>
                 <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
                     <span class="text-[11px] font-bold text-slate-600 pl-1.5">Snap Raggio:</span>
-                    <select id="compass-radius-snap" onchange="setCompassRadiusSnap(this.value)" title="Aggancia il raggio a passi fissi in pixel"
+                    <select id="compass-radius-snap" onchange="setCompassRadiusSnap(this.value)" title="Aggancia raggio e punta a passi fissi in pixel"
                         class="bg-white border border-slate-200 rounded-lg px-1.5 py-0.5 text-xs font-bold text-slate-700 outline-none cursor-pointer">
                         <option value="0" selected>Libero</option>
                         <option value="10">10 px</option>
                         <option value="20">20 px</option>
-                        <option value="25">25 px</option>
+                        <option value="28">28 px (Griglia)</option>
                         <option value="50">50 px</option>
                     </select>
                 </div>
@@ -1689,16 +1689,30 @@
             compassState.radiusSnapStep = Math.max(0, parseInt(val, 10) || 0);
             if (compassState.radiusSnapStep > 0) {
                 compassState.radius = applyCompassRadiusSnap(compassState.radius);
+                const snappedCenter = applyCompassPointSnap(compassState.cx, compassState.cy);
+                compassState.cx = snappedCenter.x;
+                compassState.cy = snappedCenter.y;
                 renderCompassOverlay();
             }
         }
 
+        function applyCompassPointSnap(x, y) {
+            if (!compassState.radiusSnapStep || compassState.radiusSnapStep <= 0) {
+                return { x: Math.round(x), y: Math.round(y) };
+            }
+            const step = compassState.radiusSnapStep;
+            return {
+                x: Math.round(x / step) * step,
+                y: Math.round(y / step) * step
+            };
+        }
+
         function applyCompassRadiusSnap(r) {
-            const clamped = Math.max(35, Math.min(750, Math.round(r)));
+            const clamped = Math.max(28, Math.min(750, Math.round(r)));
             if (!compassState.radiusSnapStep || compassState.radiusSnapStep <= 0) return clamped;
             const step = compassState.radiusSnapStep;
             const snapped = Math.round(clamped / step) * step;
-            return Math.max(35, Math.min(750, snapped));
+            return Math.max(28, Math.min(750, snapped));
         }
 
         function applyCompassAngleSnap(rad) {
@@ -1718,7 +1732,8 @@
             if (viewport) {
                 const vx = Math.round(((viewport.scrollLeft + viewport.clientWidth / 2) / state.zoom));
                 const vy = Math.round(((viewport.scrollTop + viewport.clientHeight / 2) / state.zoom));
-                const clamped = clampCoordsToStudentZone(vx, vy, 40, 40);
+                const snapped = applyCompassPointSnap(vx, vy);
+                const clamped = clampCoordsToStudentZone(snapped.x, snapped.y, 40, 40);
                 compassState.cx = clamped.x;
                 compassState.cy = clamped.y;
             }
@@ -1852,7 +1867,8 @@
                 if (e.cancelable) e.preventDefault();
                 e.stopPropagation();
                 const pt = getCanvasCoords(e);
-                const clamped = clampCoordsToStudentZone(pt.x, pt.y, 20, 20);
+                const snapped = applyCompassPointSnap(pt.x, pt.y);
+                const clamped = clampCoordsToStudentZone(snapped.x, snapped.y, 20, 20);
                 compassState.cx = clamped.x;
                 compassState.cy = clamped.y;
                 renderCompassOverlay();
