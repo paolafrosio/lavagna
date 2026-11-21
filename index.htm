@@ -1622,6 +1622,13 @@
             return clampCoordsToStudentZone(fx, fy, 20, 20);
         }
 
+        function applyCompassRadiusSnap(r) {
+            const clampedR = Math.max(28, Math.min(756, Math.round(r)));
+            if (!compassState.snapEnabled) return clampedR;
+            const snapped = Math.round(clampedR / BOARD_GRID_STEP) * BOARD_GRID_STEP;
+            return Math.max(BOARD_GRID_STEP, Math.min(756, snapped));
+        }
+
         function toggleCompassSnap() {
             compassState.snapEnabled = !compassState.snapEnabled;
             const btn = document.getElementById('btn-compass-snap');
@@ -1638,6 +1645,7 @@
                 const snappedCenter = snapCompassCenterToGrid(compassState.cx, compassState.cy);
                 compassState.cx = snappedCenter.x;
                 compassState.cy = snappedCenter.y;
+                compassState.radius = applyCompassRadiusSnap(compassState.radius);
                 compassState.angle = applyCompassAngleSnap(compassState.angle);
                 renderCompassOverlay();
             }
@@ -1845,7 +1853,7 @@
                 const dx = pt.x - compassState.cx;
                 const dy = pt.y - compassState.cy;
                 const rawR = Math.hypot(dx, dy) / 0.55;
-                compassState.radius = Math.max(35, Math.min(750, Math.round(rawR)));
+                compassState.radius = applyCompassRadiusSnap(rawR);
                 compassState.angle = applyCompassAngleSnap(Math.atan2(dy, dx));
                 renderCompassOverlay();
             };
