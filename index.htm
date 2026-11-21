@@ -81,11 +81,11 @@
             </div>
 
             <div class="p-6 space-y-5">
-                <div id="role-badge-header" class="flex items-center gap-3 p-3.5 rounded-2xl border-2 border-indigo-600 bg-indigo-50 text-indigo-700">
-                    <i id="role-header-icon" data-lucide="smartphone" class="w-6 h-6 shrink-0"></i>
+                <div id="entry-mode-banner" class="flex items-center gap-3 p-3.5 rounded-2xl border-2 border-indigo-200 bg-indigo-50 text-indigo-800">
+                    <i id="entry-mode-icon" data-lucide="smartphone" class="w-6 h-6 shrink-0 text-indigo-600"></i>
                     <div>
-                        <span id="role-header-title" class="block text-sm font-extrabold">Accesso Studente</span>
-                        <span id="role-header-sub" class="block text-xs text-indigo-500">Inserisci il tuo nome e il codice mostrato sulla LIM</span>
+                        <span id="entry-mode-title" class="block text-sm font-extrabold">Accesso Studente</span>
+                        <span id="entry-mode-subtitle" class="block text-xs text-indigo-600">Inserisci il tuo nome e il codice mostrato sulla LIM</span>
                     </div>
                 </div>
 
@@ -99,11 +99,6 @@
                     <label for="input-room-code" class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">2. Codice della Stanza (mostrato sulla LIM)</label>
                     <input type="text" id="input-room-code" placeholder="Es. CPIA-482" maxlength="12"
                         class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none text-slate-800 font-bold tracking-widest">
-                </div>
-
-                <div id="teacher-pin-field" class="hidden">
-                    <label class="block text-xs font-bold uppercase tracking-wider text-emerald-700 mb-1">Modalità LIM Docente verificata</label>
-                    <p class="text-xs text-slate-500">Verrà generato automaticamente un nuovo codice stanza da proiettare alla classe.</p>
                 </div>
 
                 <div id="resume-session-box" class="hidden bg-amber-50 border-2 border-amber-300 rounded-2xl p-3.5 space-y-2">
@@ -558,8 +553,6 @@
     </div>
 
     <script>
-        // Chiave URL esclusiva per l'accesso Docente sulla LIM
-        const TEACHER_URL_KEY = 'LIM2026';
         let hasTeacherUrlKey = false;
 
         // ---------------- STATO GLOBALE DELL'APPLICAZIONE ----------------
@@ -774,10 +767,6 @@
                 if (!raw) return;
                 const saved = JSON.parse(raw);
                 if (!saved || !saved.roomCode) return;
-                if (saved.role === 'teacher' && !hasTeacherUrlKey) {
-                    showToast('Accesso docente consentito solo dal link riservato LIM.', 'error');
-                    return;
-                }
                 state.role = (saved.role === 'teacher' && hasTeacherUrlKey) ? 'teacher' : 'student';
                 state.userName = saved.userName || 'Utente';
                 state.roomCode = saved.roomCode;
@@ -798,36 +787,27 @@
             }
         }
 
-        function selectRole(role) {
-            const effectiveRole = (role === 'teacher' && hasTeacherUrlKey) ? 'teacher' : 'student';
-            state.role = effectiveRole;
-
+        function configureEntryModeUI(role) {
+            state.role = role === 'teacher' && hasTeacherUrlKey ? 'teacher' : 'student';
+            const banner = document.getElementById('entry-mode-banner');
+            const title = document.getElementById('entry-mode-title');
+            const subtitle = document.getElementById('entry-mode-subtitle');
             const studentField = document.getElementById('student-room-field');
-            const teacherField = document.getElementById('teacher-pin-field');
-            const headerBox = document.getElementById('role-badge-header');
-            const headerTitle = document.getElementById('role-header-title');
-            const headerSub = document.getElementById('role-header-sub');
-            const headerIcon = document.getElementById('role-header-icon');
 
-            if (effectiveRole === 'teacher') {
-                if (headerBox) headerBox.className = 'flex items-center gap-3 p-3.5 rounded-2xl border-2 border-emerald-600 bg-emerald-50 text-emerald-800';
-                if (headerTitle) headerTitle.textContent = 'Accesso Docente (LIM)';
-                if (headerSub) headerSub.textContent = 'Creazione e regia della lavagna di classe';
-                if (headerIcon) headerIcon.setAttribute('data-lucide', 'presentation');
-                studentField.classList.add('hidden');
-                teacherField.classList.remove('hidden');
+            if (state.role === 'teacher') {
+                if (banner) banner.className = 'flex items-center gap-3 p-3.5 rounded-2xl border-2 border-indigo-500 bg-indigo-50 text-indigo-900';
+                if (title) title.textContent = 'Accesso Docente (LIM)';
+                if (subtitle) subtitle.textContent = 'Inserisci il tuo nome per aprire la lavagna di classe';
+                if (studentField) studentField.classList.add('hidden');
             } else {
-                if (headerBox) headerBox.className = 'flex items-center gap-3 p-3.5 rounded-2xl border-2 border-indigo-600 bg-indigo-50 text-indigo-700';
-                if (headerTitle) headerTitle.textContent = 'Accesso Studente';
-                if (headerSub) headerSub.textContent = 'Inserisci il tuo nome e il codice mostrato sulla LIM';
-                if (headerIcon) headerIcon.setAttribute('data-lucide', 'smartphone');
-                studentField.classList.remove('hidden');
-                teacherField.classList.add('hidden');
+                if (banner) banner.className = 'flex items-center gap-3 p-3.5 rounded-2xl border-2 border-emerald-200 bg-emerald-50 text-emerald-900';
+                if (title) title.textContent = 'Accesso Studente';
+                if (subtitle) subtitle.textContent = 'Inserisci il tuo nome e il codice mostrato sulla LIM';
+                if (studentField) studentField.classList.remove('hidden');
             }
-            lucide.createIcons();
         }
 
-        async function enterBoard() {
+        function enterBoard() {
             const nameInput = document.getElementById('input-user-name').value.trim();
             if (!nameInput) {
                 showToast('Inserisci il tuo nome per entrare.', 'error');
@@ -835,17 +815,12 @@
             }
             state.userName = nameInput;
 
-            if (state.role === 'teacher') {
-                if (!hasTeacherUrlKey) {
-                    state.role = 'student';
-                    selectRole('student');
-                    showToast('Accesso docente consentito solo dal link LIM.', 'error');
-                    return;
-                }
+            if (state.role === 'teacher' && hasTeacherUrlKey) {
                 if (!state.roomCode) {
                     state.roomCode = 'CPIA-' + Math.floor(100 + Math.random() * 900);
                 }
             } else {
+                state.role = 'student';
                 const code = document.getElementById('input-room-code').value.trim().toUpperCase();
                 if (!code) {
                     showToast('Inserisci il codice della stanza mostrato sulla LIM.', 'error');
@@ -1240,6 +1215,8 @@
                 if (vec && !vec.lockedByTeacher && student && vec.authorId === student.userId) {
                     if (vec.type === 'pen' && Array.isArray(msg.payload.points)) {
                         vec.points = msg.payload.points;
+                        if (typeof msg.payload.cx === 'number') vec.cx = msg.payload.cx;
+                        if (typeof msg.payload.cy === 'number') vec.cy = msg.payload.cy;
                     } else {
                         vec.x1 = msg.payload.x1;
                         vec.y1 = msg.payload.y1;
@@ -1533,23 +1510,6 @@
             document.getElementById('new-text-modal').classList.add('hidden');
         }
 
-        function confirmNewFreeText() {
-            const input = document.getElementById('new-free-text-input');
-            const text = input ? input.value.trim() : '';
-            if (!text) return;
-            const clamped = clampCoordsToStudentZone(Math.max(20, pendingTextCoords.x), Math.max(20, pendingTextCoords.y), 180, 40);
-            createBoardItem({
-                type: 'text',
-                text: text,
-                textSize: state.freeTextSize || 'lg',
-                x: clamped.x,
-                y: clamped.y
-            });
-            input.value = '';
-            closeNewTextModal();
-            setActiveTool('select');
-        }
-
         function renderTeacherLaser(x, y, active) {
             const layer = document.getElementById('cursors-layer');
             if (!layer) return;
@@ -1597,8 +1557,8 @@
         }
 
         // ---------------- COMPASSO INTERATTIVO ----------------
-        const BOARD_GRID_STEP = 28;
-        const BOARD_GRID_OFFSET = 14;
+        const GRID_STEP = 28;
+        const GRID_DOT_OFFSET = 14;
 
         const compassState = {
             cx: 490,
@@ -1614,19 +1574,15 @@
         };
 
         function snapCompassCenterToGrid(x, y) {
-            const gx = BOARD_GRID_OFFSET + Math.round((x - BOARD_GRID_OFFSET) / BOARD_GRID_STEP) * BOARD_GRID_STEP;
-            const gy = BOARD_GRID_OFFSET + Math.round((y - BOARD_GRID_OFFSET) / BOARD_GRID_STEP) * BOARD_GRID_STEP;
+            if (!compassState.snapEnabled) {
+                return clampCoordsToStudentZone(x, y, 20, 20);
+            }
+            const gx = GRID_DOT_OFFSET + Math.round((x - GRID_DOT_OFFSET) / GRID_STEP) * GRID_STEP;
+            const gy = GRID_DOT_OFFSET + Math.round((y - GRID_DOT_OFFSET) / GRID_STEP) * GRID_STEP;
             const clamped = clampCoordsToStudentZone(gx, gy, 20, 20);
-            const fx = BOARD_GRID_OFFSET + Math.round((clamped.x - BOARD_GRID_OFFSET) / BOARD_GRID_STEP) * BOARD_GRID_STEP;
-            const fy = BOARD_GRID_OFFSET + Math.round((clamped.y - BOARD_GRID_OFFSET) / BOARD_GRID_STEP) * BOARD_GRID_STEP;
-            return clampCoordsToStudentZone(fx, fy, 20, 20);
-        }
-
-        function applyCompassRadiusSnap(r) {
-            const clampedR = Math.max(28, Math.min(756, Math.round(r)));
-            if (!compassState.snapEnabled) return clampedR;
-            const snapped = Math.round(clampedR / BOARD_GRID_STEP) * BOARD_GRID_STEP;
-            return Math.max(BOARD_GRID_STEP, Math.min(756, snapped));
+            const finalX = GRID_DOT_OFFSET + Math.round((clamped.x - GRID_DOT_OFFSET) / GRID_STEP) * GRID_STEP;
+            const finalY = GRID_DOT_OFFSET + Math.round((clamped.y - GRID_DOT_OFFSET) / GRID_STEP) * GRID_STEP;
+            return { x: finalX, y: finalY };
         }
 
         function toggleCompassSnap() {
@@ -1665,6 +1621,12 @@
             return Math.round(rad / stepRad) * stepRad;
         }
 
+        function applyCompassRadiusSnap(radPx) {
+            const clamped = Math.max(28, Math.min(756, radPx));
+            if (!compassState.snapEnabled) return Math.round(clamped);
+            return Math.max(GRID_STEP, Math.min(756, Math.round(clamped / GRID_STEP) * GRID_STEP));
+        }
+
         function toggleCompassOverlay(show) {
             const layer = document.getElementById('compass-layer');
             if (!layer) return;
@@ -1676,15 +1638,9 @@
             if (viewport) {
                 const vx = Math.round(((viewport.scrollLeft + viewport.clientWidth / 2) / state.zoom));
                 const vy = Math.round(((viewport.scrollTop + viewport.clientHeight / 2) / state.zoom));
-                const clamped = clampCoordsToStudentZone(vx, vy, 40, 40);
-                if (compassState.snapEnabled) {
-                    const snapped = snapCompassCenterToGrid(clamped.x, clamped.y);
-                    compassState.cx = snapped.x;
-                    compassState.cy = snapped.y;
-                } else {
-                    compassState.cx = clamped.x;
-                    compassState.cy = clamped.y;
-                }
+                const snapped = snapCompassCenterToGrid(vx, vy);
+                compassState.cx = snapped.x;
+                compassState.cy = snapped.y;
             }
             layer.classList.remove('hidden');
             renderCompassOverlay();
@@ -1729,7 +1685,8 @@
 
             const readout = document.getElementById('compass-readout');
             if (readout) {
-                readout.textContent = `Raggio: ${Math.round(radius)}px • Angolo: ${deg}°`;
+                const gridUnits = (radius / GRID_STEP).toFixed(radius % GRID_STEP === 0 ? 0 : 1);
+                readout.textContent = `Raggio: ${Math.round(radius)}px (${gridUnits} quad.) • Angolo: ${deg}°`;
             }
 
             layer.innerHTML = `
@@ -1745,7 +1702,7 @@
                         </filter>
                     </defs>
 
-                    <circle cx="${cx}" cy="${cy}" r="${radius}" fill="none" stroke="${hex}" stroke-width="1.5" stroke-dasharray="6,6" opacity="0.5" />
+                    <circle cx="${cx}" cy="${cy}" r="${radius}" fill="none" stroke="${hex}" stroke-width="1.5" stroke-dasharray="6,6" opacity="0.5" shape-rendering="geometricPrecision" />
                     <line x1="${cx}" y1="${cy}" x2="${px}" y2="${py}" stroke="#64748b" stroke-width="1.5" stroke-dasharray="3,4" />
 
                     <g filter="url(#compass-shadow)">
@@ -1816,11 +1773,9 @@
                 if (e.cancelable) e.preventDefault();
                 e.stopPropagation();
                 const pt = getCanvasCoords(e);
-                const nextCenter = compassState.snapEnabled
-                    ? snapCompassCenterToGrid(pt.x, pt.y)
-                    : clampCoordsToStudentZone(pt.x, pt.y, 20, 20);
-                compassState.cx = nextCenter.x;
-                compassState.cy = nextCenter.y;
+                const snapped = snapCompassCenterToGrid(pt.x, pt.y);
+                compassState.cx = snapped.x;
+                compassState.cy = snapped.y;
                 renderCompassOverlay();
             };
             const onEnd = () => {
@@ -1902,10 +1857,12 @@
                     const pts = compassState.activeArc.points;
                     for (let s = 1; s <= steps; s++) {
                         const interpAngle = lastAngle + (delta * s) / steps;
-                        const px = Math.round(compassState.cx + Math.cos(interpAngle) * lockedRadius);
-                        const py = Math.round(compassState.cy + Math.sin(interpAngle) * lockedRadius);
+                        const px = Number((compassState.cx + Math.cos(interpAngle) * lockedRadius).toFixed(2));
+                        const py = Number((compassState.cy + Math.sin(interpAngle) * lockedRadius).toFixed(2));
                         pts.push(clampCoordsToStudentZone(px, py, 4, 4));
                     }
+                    compassState.activeArc.endAngle = newAngle;
+                    compassState.activeArc.totalSweep = totalSweep + delta;
                     currentVector = compassState.activeArc;
                     renderVectorPreview();
                 }
@@ -1930,8 +1887,9 @@
                 const previewLayer = document.getElementById('vector-preview-layer');
                 if (previewLayer) previewLayer.innerHTML = '';
 
-                if (arc && arc.points.length > 2) {
+                if (arc && Math.abs(totalSweep) > 0.02) {
                     if (Math.abs(totalSweep) >= Math.PI * 1.92) {
+                        arc.isFullCircle = true;
                         arc.points.push({ ...arc.points[0] });
                     }
                     const activeBoardKey = getActiveBoardKey();
@@ -1955,13 +1913,21 @@
                 lastAngle = compassState.angle;
                 totalSweep = 0;
 
-                const startX = Math.round(compassState.cx + Math.cos(compassState.angle) * lockedRadius);
-                const startY = Math.round(compassState.cy + Math.sin(compassState.angle) * lockedRadius);
+                const startX = Number((compassState.cx + Math.cos(compassState.angle) * lockedRadius).toFixed(2));
+                const startY = Number((compassState.cy + Math.sin(compassState.angle) * lockedRadius).toFixed(2));
                 const clampedStart = clampCoordsToStudentZone(startX, startY, 4, 4);
 
                 compassState.activeArc = {
                     id: 'vec-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
                     type: 'pen',
+                    isCompassArc: true,
+                    isFullCircle: false,
+                    cx: compassState.cx,
+                    cy: compassState.cy,
+                    radius: lockedRadius,
+                    startAngle: compassState.angle,
+                    endAngle: compassState.angle,
+                    totalSweep: 0,
                     isHighlighter: false,
                     shapeType: null,
                     color: state.strokeColor,
@@ -1990,18 +1956,26 @@
                 return;
             }
             const { cx, cy, radius } = compassState;
-            const steps = 72;
+            const steps = 120;
             const points = [];
             for (let i = 0; i <= steps; i++) {
                 const a = (i / steps) * Math.PI * 2;
-                const px = Math.round(cx + Math.cos(a) * radius);
-                const py = Math.round(cy + Math.sin(a) * radius);
+                const px = Number((cx + Math.cos(a) * radius).toFixed(2));
+                const py = Number((cy + Math.sin(a) * radius).toFixed(2));
                 points.push(clampCoordsToStudentZone(px, py, 4, 4));
             }
 
             const circleVec = {
                 id: 'vec-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
                 type: 'pen',
+                isCompassArc: true,
+                isFullCircle: true,
+                cx: cx,
+                cy: cy,
+                radius: radius,
+                startAngle: 0,
+                endAngle: Math.PI * 2,
+                totalSweep: Math.PI * 2,
                 isHighlighter: false,
                 shapeType: null,
                 color: state.strokeColor,
@@ -2374,12 +2348,46 @@
             };
 
             if (vec.type === 'pen') {
-                const pts = vec.points.map(p => `${p.x},${p.y}`).join(' ');
                 const xs = vec.points.map(p => p.x);
                 const ys = vec.points.map(p => p.y);
                 const cx = Math.round((Math.min(...xs) + Math.max(...xs)) / 2);
                 const cy = Math.round((Math.min(...ys) + Math.max(...ys)) / 2);
                 const mid = vec.points[Math.floor(vec.points.length / 2)] || vec.points[0] || { x: 0, y: 0 };
+
+                if (vec.isCompassArc && typeof vec.cx === 'number' && typeof vec.cy === 'number' && typeof vec.radius === 'number') {
+                    const r = vec.radius;
+                    const sweep = Number(vec.totalSweep) || 0;
+                    if (vec.isFullCircle || Math.abs(sweep) >= Math.PI * 1.92) {
+                        return `
+                            <g class="vector-item" ${deleteAttr} ${opacityAttr} ${getRotTransform(vec.cx, vec.cy)}>
+                                <circle cx="${vec.cx}" cy="${vec.cy}" r="${r}" fill="none" stroke="transparent" stroke-width="${hitSw}" />
+                                <circle cx="${vec.cx}" cy="${vec.cy}" r="${r}" fill="none" stroke="${hex}" stroke-width="${sw}" shape-rendering="geometricPrecision" />
+                                ${renderEraseBadge(vec.cx + r, vec.cy)}
+                            </g>
+                        `;
+                    }
+                    const a1 = Number(vec.startAngle) || 0;
+                    const a2 = a1 + sweep;
+                    const sx = (vec.cx + Math.cos(a1) * r).toFixed(2);
+                    const sy = (vec.cy + Math.sin(a1) * r).toFixed(2);
+                    const ex = (vec.cx + Math.cos(a2) * r).toFixed(2);
+                    const ey = (vec.cy + Math.sin(a2) * r).toFixed(2);
+                    const largeArcFlag = Math.abs(sweep) > Math.PI ? 1 : 0;
+                    const sweepFlag = sweep >= 0 ? 1 : 0;
+                    const arcPath = `M ${sx} ${sy} A ${r} ${r} 0 ${largeArcFlag} ${sweepFlag} ${ex} ${ey}`;
+                    const midAngle = a1 + sweep / 2;
+                    const bx = Math.round(vec.cx + Math.cos(midAngle) * r);
+                    const by = Math.round(vec.cy + Math.sin(midAngle) * r);
+                    return `
+                        <g class="vector-item" ${deleteAttr} ${opacityAttr} ${getRotTransform(vec.cx, vec.cy)}>
+                            <path d="${arcPath}" fill="none" stroke="transparent" stroke-width="${hitSw}" stroke-linecap="round" />
+                            <path d="${arcPath}" fill="none" stroke="${hex}" stroke-width="${sw}" stroke-linecap="round" shape-rendering="geometricPrecision" />
+                            ${renderEraseBadge(bx, by)}
+                        </g>
+                    `;
+                }
+
+                const pts = vec.points.map(p => `${p.x},${p.y}`).join(' ');
                 return `
                     <g class="vector-item" ${deleteAttr} ${opacityAttr} ${getRotTransform(cx, cy)}>
                         <polyline points="${pts}" fill="none" stroke="transparent" stroke-width="${hitSw}" stroke-linecap="round" stroke-linejoin="round" />
@@ -2587,6 +2595,10 @@
                         x: Math.max(0, Math.min(3000, p.x + dx)),
                         y: Math.max(0, Math.min(2000, p.y + dy))
                     }));
+                    if (vec.isCompassArc && typeof origX1 === 'number' && typeof origY1 === 'number') {
+                        vec.cx = Math.max(0, Math.min(3000, origX1 + dx));
+                        vec.cy = Math.max(0, Math.min(2000, origY1 + dy));
+                    }
                 } else {
                     vec.x1 = Math.max(0, Math.min(3000, origX1 + dx));
                     vec.y1 = Math.max(0, Math.min(2000, origY1 + dy));
@@ -2624,6 +2636,8 @@
                         payload: {
                             id: vec.id,
                             points: vec.points,
+                            cx: vec.cx,
+                            cy: vec.cy,
                             x1: vec.x1,
                             y1: vec.y1,
                             x2: vec.x2,
@@ -2652,6 +2666,10 @@
 
                 if (vec.type === 'pen' && Array.isArray(vec.points)) {
                     origPoints = vec.points.map(p => ({ x: p.x, y: p.y }));
+                    if (vec.isCompassArc) {
+                        origX1 = vec.cx;
+                        origY1 = vec.cy;
+                    }
                 } else {
                     origX1 = vec.x1;
                     origY1 = vec.y1;
@@ -2820,6 +2838,23 @@
                 input.focus();
                 input.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
+        }
+
+        function confirmNewFreeText() {
+            const input = document.getElementById('new-free-text-input');
+            const text = input ? input.value.trim() : '';
+            if (!text) return;
+            const clamped = clampCoordsToStudentZone(Math.max(20, pendingTextCoords.x), Math.max(20, pendingTextCoords.y), 180, 40);
+            createBoardItem({
+                type: 'text',
+                text: text,
+                textSize: state.freeTextSize || 'lg',
+                x: clamped.x,
+                y: clamped.y
+            });
+            input.value = '';
+            closeNewTextModal();
+            setActiveTool('select');
         }
 
         function createBoardItem(data) {
@@ -3816,13 +3851,19 @@
 
                 newVecs.forEach(vec => {
                     if (vec.type === 'pen' && Array.isArray(vec.points)) {
-                        state.vectors.push({
+                        const mappedVec = {
                             ...vec,
                             points: vec.points.map(p => ({
                                 x: Math.round(z.innerX + (p.x - minX) * scale),
                                 y: Math.round(z.innerY + (p.y - minY) * scale)
                             }))
-                        });
+                        };
+                        if (vec.isCompassArc && typeof vec.cx === 'number' && typeof vec.cy === 'number') {
+                            mappedVec.cx = Math.round(z.innerX + (vec.cx - minX) * scale);
+                            mappedVec.cy = Math.round(z.innerY + (vec.cy - minY) * scale);
+                            mappedVec.radius = Math.round((vec.radius || 100) * scale);
+                        }
+                        state.vectors.push(mappedVec);
                     } else {
                         state.vectors.push({
                             ...vec,
@@ -4351,12 +4392,12 @@
             if (roomParam) {
                 document.getElementById('input-room-code').value = roomParam.toUpperCase();
             }
-            if (params.get('docente') === TEACHER_URL_KEY) {
+            if (params.get('docente') === 'LIM2026') {
                 hasTeacherUrlKey = true;
-                selectRole('teacher');
+                configureEntryModeUI('teacher');
             } else {
                 hasTeacherUrlKey = false;
-                selectRole('student');
+                configureEntryModeUI('student');
             }
             checkSavedSessionOnBoot();
             initCanvasInteractions();
