@@ -157,17 +157,17 @@
                 <span id="participants-count-badge">0</span>
             </button>
 
-            <button type="button" id="freeze-btn" onclick="toggleFreezeBoard()" title="Blocca o sblocca la lavagna per gli studenti"
-                class="hidden items-center gap-1.5 bg-slate-100 hover:bg-amber-100 text-slate-700 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer">
-                <i data-lucide="lock" class="w-4 h-4"></i>
-                <span id="freeze-label" class="hidden sm:inline">Blocca</span>
+            <button type="button" id="freeze-btn" onclick="toggleFreezeBoard()" title="Blocca o sblocca subito tutti gli alunni"
+                class="hidden items-center gap-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer shadow-xs">
+                <i id="freeze-icon" data-lucide="lock" class="w-4 h-4"></i>
+                <span id="freeze-label">Blocca tutti</span>
             </button>
         </div>
     </header>
 
     <!-- BANNER STATO BLOCCATO / SQUADRA STUDENTE -->
-    <div id="frozen-banner" class="hidden bg-amber-500 text-white text-center text-xs font-bold py-1.5 px-4 z-20 shadow-xs">
-        🔒 Il docente ha messo in pausa la lavagna per la spiegazione. Puoi osservare ma non modificare.
+    <div id="frozen-banner" class="hidden bg-rose-600 text-white text-center text-xs font-bold py-1.5 px-4 z-20 shadow-xs">
+        🔒 Lavagna bloccata: gli alunni non possono scrivere, disegnare o spostare elementi.
     </div>
     <div id="student-team-banner" class="hidden bg-indigo-600 text-white text-center text-xs font-bold py-1.5 px-4 z-20 shadow-xs">
         <!-- Popolato dinamicamente se il docente attiva le squadre -->
@@ -401,6 +401,11 @@
             <div id="participants-list" class="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-2 bg-slate-50 rounded-xl border border-slate-100">
                 <span class="text-xs text-slate-400 italic">Nessuno studente ancora connesso...</span>
             </div>
+            <button type="button" id="panel-freeze-btn" onclick="toggleFreezeBoard()"
+                class="mt-2 w-full py-2.5 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer">
+                <i data-lucide="lock" class="w-4 h-4"></i>
+                <span id="panel-freeze-label">Blocca tutti gli alunni</span>
+            </button>
         </div>
 
         <div>
@@ -1971,8 +1976,8 @@
             if (existing) existing.remove();
 
             const isOwner = item.authorId === state.userId;
-            const canEditOrDelete = state.role === 'teacher' || isOwner;
             const canMove = state.role === 'teacher' || !state.isFrozen;
+            const canEditOrDelete = state.role === 'teacher' || (isOwner && !state.isFrozen);
 
             if (item.type === 'stamp') {
                 const el = document.createElement('div');
@@ -2309,6 +2314,10 @@
         }
 
         function deleteItem(id) {
+            if (state.isFrozen && state.role !== 'teacher') {
+                showToast('La lavagna è bloccata dal docente.', 'error');
+                return;
+            }
             state.items = state.items.filter(n => n.id !== id);
             const el = document.getElementById(id);
             if (el) el.remove();
@@ -2344,6 +2353,10 @@
         }
 
         function setNoteColorById(id, color) {
+            if (state.isFrozen && state.role !== 'teacher') {
+                showToast('La lavagna è bloccata dal docente.', 'error');
+                return;
+            }
             const item = state.items.find(n => n.id === id);
             if (!item || !NOTE_STYLES[color]) return;
             item.color = color;
@@ -2356,6 +2369,10 @@
         }
 
         function openEditNoteModal(id) {
+            if (state.isFrozen && state.role !== 'teacher') {
+                showToast('La lavagna è bloccata dal docente.', 'error');
+                return;
+            }
             const item = state.items.find(n => n.id === id);
             if (!item) return;
             editingNoteId = id;
@@ -2695,7 +2712,41 @@
             state.isFrozen = !state.isFrozen;
             updateFreezeUI();
             broadcastState();
-            showToast(state.isFrozen ? 'Lavagna bloccata per gli studenti.' : 'Lavagna sbloccata!', 'info');
+            showToast(state.isFrozen ? '🔒 Tutti gli alunni sono stati bloccati.' : '🔓 Alunni sbloccati: ora possono interagire.', 'info');
+        }
+
+        function updateFreezeUI() {
+            const btn = document.getElementById('freeze-btn');
+            const label = document.getElementById('freeze-label');
+            const panelBtn = document.getElementById('panel-freeze-btn');
+            const panelLabel = document.getElementById('panel-freeze-label');
+            const banner = document.getElementById('frozen-banner');
+
+            if (state.isFrozen) {
+                if (btn) {
+                    btn.className = 'flex items-center gap-1.5 bg-rose-600 hover:bg-rose-700 border border-rose-700 text-white px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer shadow-sm animate-pulse';
+                }
+                if (label) label.textContent = 'Sblocca tutti';
+                if (panelBtn) {
+                    panelBtn.className = 'mt-2 w-full py-2.5 px-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm';
+                }
+                if (panelLabel) panelLabel.textContent = 'Sblocca tutti gli alunni';
+                banner.textContent = state.role === 'teacher'
+                    ? '🔒 Modalità blocco attiva: tutti gli alunni sono bloccati (tu puoi continuare a lavorare). Clicca su "Sblocca tutti" per riattivare la classe.'
+                    : '🔒 Il docente ha bloccato la lavagna per la spiegazione. Puoi osservare ma non modificare.';
+                banner.classList.remove('hidden');
+            } else {
+                if (btn) {
+                    btn.className = 'flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer shadow-xs';
+                }
+                if (label) label.textContent = 'Blocca tutti';
+                if (panelBtn) {
+                    panelBtn.className = 'mt-2 w-full py-2.5 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer';
+                }
+                if (panelLabel) panelLabel.textContent = 'Blocca tutti gli alunni';
+                banner.classList.add('hidden');
+            }
+            lucide.createIcons();
         }
 
         function updateFreezeUI() {
