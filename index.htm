@@ -356,8 +356,8 @@
             <main id="board-viewport" class="flex-1 overflow-auto relative bg-slate-200/60">
                 <div id="board-zoom-sizer" style="width: 3000px; height: 2000px;" class="relative">
                     <div id="board-canvas" style="width: 3000px; height: 2000px; transform-origin: 0 0;" class="board-grid relative shadow-inner">
-
-        <!-- VIEWPORT LAVAGNA -->
+                        <!-- Sfondo modelli -->
+                        <div id="template-bg-layer" class="absolute inset-0 pointer-events-none"></div>
         <main id="board-viewport" class="flex-1 overflow-auto relative bg-slate-200/60">
             <div id="board-zoom-sizer" style="width: 3000px; height: 2000px;" class="relative">
                 <div id="board-canvas" style="width: 3000px; height: 2000px; transform-origin: 0 0;" class="board-grid relative shadow-inner">
@@ -385,13 +385,13 @@
                     <!-- Livello Cursori Remoti e Laser -->
                     <div id="cursors-layer" class="absolute inset-0 pointer-events-none" style="z-index: 30;"></div>
 
-                    <!-- Suggerimento lavagna vuota -->
-                    <div id="empty-board-hint" class="absolute top-64 left-64 pointer-events-none bg-white/80 backdrop-blur-xs border border-slate-200 rounded-3xl p-6 max-w-sm shadow-xs">
-                        <p class="text-sm font-bold text-slate-700">✨ La lavagna è pronta!</p>
-                        <p class="text-xs text-slate-500 mt-1">Scrivi un post-it qui in basso oppure scegli matita, forme, compasso o timbri dalla barra a sinistra.</p>
+                        <!-- Suggerimento lavagna vuota -->
+                        <div id="empty-board-hint" class="absolute top-64 left-64 pointer-events-none bg-white/80 backdrop-blur-xs border border-slate-200 rounded-3xl p-6 max-w-sm shadow-xs">
+                            <p class="text-sm font-bold text-slate-700">✨ La lavagna è pronta!</p>
+                            <p class="text-xs text-slate-500 mt-1">Scrivi un post-it qui in basso oppure scegli matita, forme, compasso o timbri dalla barra a sinistra.</p>
+                        </div>
                     </div>
                 </div>
-            </div>
             </main>
         </div>
 
