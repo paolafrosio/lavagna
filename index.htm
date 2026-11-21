@@ -1011,7 +1011,7 @@
             } else if (msg.type === 'MOVE_ITEM') {
                 if (state.isFrozen) return;
                 const item = state.items.find(n => n.id === msg.payload.id);
-                if (item) {
+                if (item && !item.lockedByTeacher) {
                     item.x = msg.payload.x;
                     item.y = msg.payload.y;
                     item.zIndex = ++state.maxZIndex;
@@ -1021,7 +1021,7 @@
             } else if (msg.type === 'RESIZE_ITEM') {
                 if (state.isFrozen) return;
                 const item = state.items.find(n => n.id === msg.payload.id);
-                if (item) {
+                if (item && !item.lockedByTeacher) {
                     item.width = msg.payload.width;
                     if (msg.payload.height) item.height = msg.payload.height;
                     renderSingleItem(item);
@@ -1030,7 +1030,7 @@
             } else if (msg.type === 'ROTATE_ITEM') {
                 if (state.isFrozen) return;
                 const item = state.items.find(n => n.id === msg.payload.id);
-                if (item) {
+                if (item && !item.lockedByTeacher) {
                     item.rotation = msg.payload.rotation || 0;
                     renderSingleItem(item);
                     broadcastState();
@@ -1038,7 +1038,7 @@
             } else if (msg.type === 'EDIT_ITEM') {
                 if (state.isFrozen) return;
                 const item = state.items.find(n => n.id === msg.payload.id);
-                if (item) {
+                if (item && !item.lockedByTeacher) {
                     item.text = msg.payload.text;
                     if (msg.payload.color) item.color = msg.payload.color;
                     renderSingleItem(item);
@@ -1046,6 +1046,8 @@
                 }
             } else if (msg.type === 'DELETE_ITEM') {
                 if (state.isFrozen) return;
+                const targetItem = state.items.find(n => n.id === msg.payload);
+                if (!targetItem || targetItem.lockedByTeacher) return;
                 state.items = state.items.filter(n => n.id !== msg.payload);
                 const el = document.getElementById(msg.payload);
                 if (el) el.remove();
@@ -1070,13 +1072,15 @@
                 broadcastState();
             } else if (msg.type === 'DELETE_VECTOR') {
                 if (state.isFrozen) return;
+                const targetVec = state.vectors.find(v => v.id === msg.payload);
+                if (!targetVec || targetVec.lockedByTeacher) return;
                 state.vectors = state.vectors.filter(v => v.id !== msg.payload);
                 renderAllVectors();
                 broadcastState();
             } else if (msg.type === 'MOVE_VECTOR') {
                 if (state.isFrozen) return;
                 const vec = state.vectors.find(v => v.id === msg.payload.id);
-                if (vec) {
+                if (vec && !vec.lockedByTeacher) {
                     if (vec.type === 'pen' && Array.isArray(msg.payload.points)) {
                         vec.points = msg.payload.points;
                     } else {
@@ -1402,6 +1406,7 @@
                         color: state.strokeColor,
                         strokeWidth: state.strokeWidth || 3,
                         authorId: state.userId,
+                        lockedByTeacher: state.role === 'teacher',
                         points: [pt],
                         x1: pt.x, y1: pt.y,
                         x2: pt.x, y2: pt.y
@@ -1628,6 +1633,9 @@
             const isSelectOrEraser = state.activeTool === 'select' || isEraserMode;
 
             state.vectors.forEach((vec, index) => {
+                const isProtectedFromStudent = state.role !== 'teacher' && Boolean(vec.lockedByTeacher);
+                if (isProtectedFromStudent) return;
+
                 let minX = 0, minY = 0, maxX = 0, maxY = 0;
                 let bx = 60, by = 60;
 
@@ -1903,6 +1911,10 @@
             }
             if (state.isFrozen && state.role !== 'teacher') return;
 
+            const targetVec = state.vectors.find(v => v.id === id);
+            if (!targetVec) return;
+            if (state.role !== 'teacher' && targetVec.lockedByTeacher) return;
+
             const prevLen = state.vectors.length;
             state.vectors = state.vectors.filter(v => v.id !== id);
             if (state.vectors.length === prevLen) return;
@@ -2005,6 +2017,7 @@
                 color: data.color || state.selectedColor,
                 author: data.author || state.userName,
                 authorId: data.authorId || state.userId,
+                lockedByTeacher: isTeacher,
                 group: data.group || state.myGroup || null,
                 x: typeof data.x === 'number' ? data.x : defaultX,
                 y: typeof data.y === 'number' ? data.y : defaultY,
@@ -2039,8 +2052,9 @@
             if (existing) existing.remove();
 
             const isOwner = item.authorId === state.userId;
-            const canMove = state.role === 'teacher' || !state.isFrozen;
-            const canEditOrDelete = state.role === 'teacher' || (isOwner && !state.isFrozen);
+            const isProtected = state.role !== 'teacher' && Boolean(item.lockedByTeacher);
+            const canMove = state.role === 'teacher' || (!state.isFrozen && !isProtected);
+            const canEditOrDelete = state.role === 'teacher' || (isOwner && !state.isFrozen && !isProtected);
 
             if (item.type === 'stamp') {
                 const el = document.createElement('div');
