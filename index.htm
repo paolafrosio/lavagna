@@ -280,10 +280,13 @@
             <!-- Opzioni colore e spessore tratto (Matita, Forme, Freccia, Compasso) -->
             <div id="stroke-picker-bar" class="hidden flex items-center gap-2">
                 <div class="flex items-center gap-1">
-                    <button type="button" data-scolor="indigo" onclick="selectStrokeColor('indigo')" class="scolor-btn w-6 h-6 rounded-full bg-indigo-600 border-2 border-slate-900 scale-110 cursor-pointer"></button>
-                    <button type="button" data-scolor="rose" onclick="selectStrokeColor('rose')" class="scolor-btn w-6 h-6 rounded-full bg-rose-600 border-2 border-transparent cursor-pointer"></button>
-                    <button type="button" data-scolor="emerald" onclick="selectStrokeColor('emerald')" class="scolor-btn w-6 h-6 rounded-full bg-emerald-600 border-2 border-transparent cursor-pointer"></button>
-                    <button type="button" data-scolor="slate" onclick="selectStrokeColor('slate')" class="scolor-btn w-6 h-6 rounded-full bg-slate-700 border-2 border-transparent cursor-pointer"></button>
+                    <button type="button" data-scolor="indigo" onclick="selectStrokeColor('indigo')" title="Indaco" class="scolor-btn w-6 h-6 rounded-full bg-indigo-600 border-2 border-slate-900 scale-110 cursor-pointer"></button>
+                    <button type="button" data-scolor="sky" onclick="selectStrokeColor('sky')" title="Azzurro" class="scolor-btn w-6 h-6 rounded-full bg-sky-500 border-2 border-transparent cursor-pointer"></button>
+                    <button type="button" data-scolor="emerald" onclick="selectStrokeColor('emerald')" title="Verde" class="scolor-btn w-6 h-6 rounded-full bg-emerald-600 border-2 border-transparent cursor-pointer"></button>
+                    <button type="button" data-scolor="amber" onclick="selectStrokeColor('amber')" title="Arancione" class="scolor-btn w-6 h-6 rounded-full bg-amber-500 border-2 border-transparent cursor-pointer"></button>
+                    <button type="button" data-scolor="rose" onclick="selectStrokeColor('rose')" title="Rosso" class="scolor-btn w-6 h-6 rounded-full bg-rose-600 border-2 border-transparent cursor-pointer"></button>
+                    <button type="button" data-scolor="purple" onclick="selectStrokeColor('purple')" title="Viola" class="scolor-btn w-6 h-6 rounded-full bg-purple-600 border-2 border-transparent cursor-pointer"></button>
+                    <button type="button" data-scolor="slate" onclick="selectStrokeColor('slate')" title="Ardesia / Nero" class="scolor-btn w-6 h-6 rounded-full bg-slate-700 border-2 border-transparent cursor-pointer"></button>
                 </div>
                 <div class="h-5 w-px bg-slate-200"></div>
                 <div class="flex items-center gap-1">
@@ -294,12 +297,12 @@
             </div>
 
             <!-- Opzioni Compasso -->
-            <div id="compass-tool-hint" class="hidden flex items-center gap-2 pl-2 border-l border-slate-200">
+            <div id="compass-tool-hint" class="hidden flex flex-wrap items-center gap-2 pl-2 border-l border-slate-200">
                 <span id="compass-readout" class="text-xs font-bold text-slate-700 whitespace-nowrap">Raggio: 140px • Angolo: 0°</span>
                 <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
                     <button type="button" id="btn-compass-snap" onclick="toggleCompassSnap()"
                         class="px-2 py-0.5 rounded-lg bg-slate-200 text-slate-600 text-xs font-bold cursor-pointer whitespace-nowrap transition-colors">
-                        Snap: OFF
+                        Snap Angolo: OFF
                     </button>
                     <select id="compass-snap-step" onchange="setCompassSnapStep(this.value)" title="Scegli il passo di snap in gradi"
                         class="bg-white border border-slate-200 rounded-lg px-1.5 py-0.5 text-xs font-bold text-slate-700 outline-none cursor-pointer">
@@ -308,6 +311,17 @@
                         <option value="30">30°</option>
                         <option value="45">45°</option>
                         <option value="90">90°</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+                    <span class="text-[11px] font-bold text-slate-600 pl-1.5">Snap Raggio:</span>
+                    <select id="compass-radius-snap" onchange="setCompassRadiusSnap(this.value)" title="Aggancia il raggio a passi fissi in pixel"
+                        class="bg-white border border-slate-200 rounded-lg px-1.5 py-0.5 text-xs font-bold text-slate-700 outline-none cursor-pointer">
+                        <option value="0" selected>Libero</option>
+                        <option value="10">10 px</option>
+                        <option value="20">20 px</option>
+                        <option value="25">25 px</option>
+                        <option value="50">50 px</option>
                     </select>
                 </div>
                 <button type="button" onclick="drawFullCompassCircle()"
@@ -370,8 +384,11 @@
                     <svg id="vectors-svg-layer" class="absolute inset-0 w-full h-full pointer-events-none" style="z-index: 5;">
                         <defs>
                             <marker id="arrowhead-indigo" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#4f46e5"/></marker>
-                            <marker id="arrowhead-rose" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#e11d48"/></marker>
+                            <marker id="arrowhead-sky" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#0ea5e9"/></marker>
                             <marker id="arrowhead-emerald" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#059669"/></marker>
+                            <marker id="arrowhead-amber" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#f59e0b"/></marker>
+                            <marker id="arrowhead-rose" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#e11d48"/></marker>
+                            <marker id="arrowhead-purple" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#9333ea"/></marker>
                             <marker id="arrowhead-slate" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#334155"/></marker>
                         </defs>
                         <g id="vectors-layer"></g>
@@ -663,8 +680,11 @@
 
         const STROKE_HEX = {
             indigo: '#4f46e5',
-            rose: '#e11d48',
+            sky: '#0ea5e9',
             emerald: '#059669',
+            amber: '#f59e0b',
+            rose: '#e11d48',
+            purple: '#9333ea',
             slate: '#334155',
             hl_yellow: '#fde047',
             hl_green: '#bef264',
@@ -1041,7 +1061,6 @@
         function getGroupZoneBounds(groupNum, totalGroups) {
             const count = Math.max(2, Math.min(4, totalGroups || 2));
             const idx = Math.max(0, Math.min(count - 1, (groupNum || 1) - 1));
-            // Dimensioni reali del #board-canvas (3000 x 2000 px) con padding p-8 (32px), pt-20 (80px) e gap-6 (24px)
             const boardW = 3000;
             const boardH = 2000;
             const padX = 32;
@@ -1087,14 +1106,12 @@
             if (state.role === 'teacher' || state.teamCount <= 0 || !state.myGroup) {
                 return { x, y };
             }
-            // In "Stanze Separate" usa tutta l'area della propria stanza (3000 x 2000)
             if (state.groupSpaceMode === 'separate') {
                 return {
                     x: Math.max(44, Math.min(3000 - Math.max(40, itemW) - 44, x)),
                     y: Math.max(140, Math.min(2000 - Math.max(40, itemH) - 44, y))
                 };
             }
-            // In "Lavagna Unica" confina lo studente esclusivamente dentro tutto il riquadro del proprio colore
             const z = getGroupZoneBounds(state.myGroup, state.teamCount);
             const maxX = Math.max(z.innerX, z.x + z.w - Math.max(40, itemW) - 16);
             const maxY = Math.max(z.innerY, z.y + z.h - Math.max(40, itemH) - 16);
@@ -1285,6 +1302,9 @@
                 if (vec && !vec.lockedByTeacher && student && vec.authorId === student.userId) {
                     if (vec.type === 'pen' && Array.isArray(msg.payload.points)) {
                         vec.points = msg.payload.points;
+                    } else if (vec.type === 'arc') {
+                        vec.cx = msg.payload.cx;
+                        vec.cy = msg.payload.cy;
                     } else {
                         vec.x1 = msg.payload.x1;
                         vec.y1 = msg.payload.y1;
@@ -1578,22 +1598,6 @@
             document.getElementById('new-text-modal').classList.add('hidden');
         }
 
-        function confirmNewFreeText() {
-            const input = document.getElementById('new-free-text-input');
-            const text = input ? input.value.trim() : '';
-            if (!text) return;
-            createBoardItem({
-                type: 'text',
-                text: text,
-                textSize: state.freeTextSize || 'lg',
-                x: Math.max(20, pendingTextCoords.x),
-                y: Math.max(20, pendingTextCoords.y)
-            });
-            input.value = '';
-            closeNewTextModal();
-            setActiveTool('select');
-        }
-
         function renderTeacherLaser(x, y, active) {
             const layer = document.getElementById('cursors-layer');
             if (!layer) return;
@@ -1648,6 +1652,7 @@
             angle: 0, // radianti
             snapEnabled: false,
             snapStepDeg: 15,
+            radiusSnapStep: 0,
             isDraggingCenter: false,
             isDraggingRadius: false,
             isDraggingPencil: false,
@@ -1659,10 +1664,10 @@
             const btn = document.getElementById('btn-compass-snap');
             if (btn) {
                 if (compassState.snapEnabled) {
-                    btn.textContent = 'Snap: ON';
+                    btn.textContent = 'Snap Angolo: ON';
                     btn.className = 'px-2 py-0.5 rounded-lg bg-indigo-600 text-white text-xs font-bold cursor-pointer whitespace-nowrap transition-colors shadow-2xs';
                 } else {
-                    btn.textContent = 'Snap: OFF';
+                    btn.textContent = 'Snap Angolo: OFF';
                     btn.className = 'px-2 py-0.5 rounded-lg bg-slate-200 text-slate-600 text-xs font-bold cursor-pointer whitespace-nowrap transition-colors';
                 }
             }
@@ -1678,6 +1683,22 @@
                 compassState.angle = applyCompassAngleSnap(compassState.angle);
                 renderCompassOverlay();
             }
+        }
+
+        function setCompassRadiusSnap(val) {
+            compassState.radiusSnapStep = Math.max(0, parseInt(val, 10) || 0);
+            if (compassState.radiusSnapStep > 0) {
+                compassState.radius = applyCompassRadiusSnap(compassState.radius);
+                renderCompassOverlay();
+            }
+        }
+
+        function applyCompassRadiusSnap(r) {
+            const clamped = Math.max(35, Math.min(750, Math.round(r)));
+            if (!compassState.radiusSnapStep || compassState.radiusSnapStep <= 0) return clamped;
+            const step = compassState.radiusSnapStep;
+            const snapped = Math.round(clamped / step) * step;
+            return Math.max(35, Math.min(750, snapped));
         }
 
         function applyCompassAngleSnap(rad) {
@@ -1715,7 +1736,6 @@
             const hex = STROKE_HEX[state.strokeColor] || STROKE_HEX.indigo;
             const deg = Math.round(((angle * 180 / Math.PI) % 360 + 360) % 360);
 
-            // Calcolo della geometria realistica delle due aste del compasso tecnico
             const midX = (cx + px) / 2;
             const midY = (cy + py) / 2;
             const dx = px - cx;
@@ -1723,7 +1743,6 @@
             const dist = Math.max(1, Math.hypot(dx, dy));
             const ux = dx / dist;
             const uy = dy / dist;
-            // Normale orientata verso l'alto per la cerniera del compasso
             let nx = -uy;
             let ny = ux;
             if (ny > 0.35) {
@@ -1736,13 +1755,11 @@
             const handleTopX = Math.round(apexX + nx * 34);
             const handleTopY = Math.round(apexY + ny * 34);
 
-            // Punti per l'asta metallica sinistra (punta) e destra (porta-mina)
             const leftMidX = Math.round((apexX + cx) / 2);
             const leftMidY = Math.round((apexY + cy) / 2);
             const rightMidX = Math.round((apexX + px) / 2);
             const rightMidY = Math.round((apexY + py) / 2);
 
-            // Posizione della maniglia di apertura raggio (a 55% lungo il raggio)
             const radHandleX = Math.round(cx + Math.cos(angle) * (radius * 0.55));
             const radHandleY = Math.round(cy + Math.sin(angle) * (radius * 0.55));
 
@@ -1764,48 +1781,37 @@
                         </filter>
                     </defs>
 
-                    <!-- Traiettoria circolare guida -->
                     <circle cx="${cx}" cy="${cy}" r="${radius}" fill="none" stroke="${hex}" stroke-width="1.5" stroke-dasharray="6,6" opacity="0.5" />
-                    <!-- Linea del raggio con tacche -->
                     <line x1="${cx}" y1="${cy}" x2="${px}" y2="${py}" stroke="#64748b" stroke-width="1.5" stroke-dasharray="3,4" />
 
                     <g filter="url(#compass-shadow)">
-                        <!-- Asta di regolazione centrale con rotella micrometrica -->
                         <line x1="${leftMidX}" y1="${leftMidY}" x2="${rightMidX}" y2="${rightMidY}" stroke="#64748b" stroke-width="3.5" />
                         <rect x="${Math.round((leftMidX + rightMidX) / 2 - 6)}" y="${Math.round((leftMidY + rightMidY) / 2 - 9)}"
                               width="12" height="18" rx="3" fill="#334155" stroke="#cbd5e1" stroke-width="1.5" />
 
-                        <!-- Ago metallico d'acciaio sul centro -->
                         <line x1="${cx}" y1="${cy}" x2="${Math.round(cx + (apexX - cx) * 0.16)}" y2="${Math.round(cy + (apexY - cy) * 0.16)}"
                               stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" />
-                        <!-- Gamba sinistra (punta) -->
                         <line x1="${apexX}" y1="${apexY}" x2="${Math.round(cx + (apexX - cx) * 0.14)}" y2="${Math.round(cy + (apexY - cy) * 0.14)}"
                               stroke="url(#compass-metal)" stroke-width="9" stroke-linecap="round" />
 
-                        <!-- Mina colorata sulla punta scrivente -->
                         <line x1="${px}" y1="${py}" x2="${Math.round(px + (apexX - px) * 0.15)}" y2="${Math.round(py + (apexY - py) * 0.15)}"
                               stroke="${hex}" stroke-width="4" stroke-linecap="round" />
-                        <!-- Gamba destra (porta-mina) -->
                         <line x1="${apexX}" y1="${apexY}" x2="${Math.round(px + (apexX - px) * 0.13)}" y2="${Math.round(py + (apexY - py) * 0.13)}"
                               stroke="url(#compass-metal)" stroke-width="9" stroke-linecap="round" />
 
-                        <!-- Impugnatura superiore zigrinata -->
                         <line x1="${apexX}" y1="${apexY}" x2="${handleTopX}" y2="${handleTopY}" stroke="#1e293b" stroke-width="8" stroke-linecap="round" />
                         <circle cx="${handleTopX}" cy="${handleTopY}" r="5.5" fill="#4f46e5" stroke="#ffffff" stroke-width="2" />
 
-                        <!-- Cerniera circolare superiore -->
                         <circle cx="${apexX}" cy="${apexY}" r="13" fill="#1e293b" stroke="#e2e8f0" stroke-width="2.5" />
                         <circle cx="${apexX}" cy="${apexY}" r="5" fill="#94a3b8" />
                     </g>
 
-                    <!-- Etichetta raggio -->
                     <g transform="translate(${radHandleX}, ${radHandleY - 24})">
                         <rect x="-28" y="-11" width="56" height="20" rx="10" fill="#0f172a" opacity="0.88" />
                         <text x="0" y="3" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="bold" font-family="Inter, sans-serif">${Math.round(radius)} px</text>
                     </g>
                 </svg>
 
-                <!-- 1. Maniglia Punta (Centro): sposta il compasso -->
                 <div id="compass-center-handle"
                     style="left:${cx - 17}px; top:${cy - 17}px;"
                     title="Trascina per spostare la punta del compasso"
@@ -1813,7 +1819,6 @@
                     <span class="w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-white/60"></span>
                 </div>
 
-                <!-- 2. Maniglia Apertura Raggio: allarga o stringe senza disegnare -->
                 <div id="compass-radius-handle"
                     style="left:${radHandleX - 15}px; top:${radHandleY - 15}px;"
                     title="Trascina per aprire o chiudere il raggio"
@@ -1823,7 +1828,6 @@
                     </svg>
                 </div>
 
-                <!-- 3. Maniglia Mina: ruota a raggio fisso bloccato e traccia l'arco perfetto -->
                 <div id="compass-pencil-handle"
                     style="left:${px - 20}px; top:${py - 20}px; background-color:${hex};"
                     title="Ruota attorno al centro per tracciare un arco perfetto"
@@ -1882,9 +1886,8 @@
                 const pt = getCanvasCoords(e);
                 const dx = pt.x - compassState.cx;
                 const dy = pt.y - compassState.cy;
-                // Il cursore si trova al 55% del raggio, quindi moltiplichiamo per ~1.8
                 const rawR = Math.hypot(dx, dy) / 0.55;
-                compassState.radius = Math.max(35, Math.min(750, Math.round(rawR)));
+                compassState.radius = applyCompassRadiusSnap(rawR);
                 compassState.angle = applyCompassAngleSnap(Math.atan2(dy, dx));
                 renderCompassOverlay();
             };
@@ -1928,23 +1931,17 @@
                 while (delta > Math.PI) delta -= Math.PI * 2;
                 while (delta < -Math.PI) delta += Math.PI * 2;
 
-                // Campionamento fitto lungo la circonferenza a RAGGIO BLOCCATO (lockedRadius)
-                const steps = Math.max(1, Math.ceil(Math.abs(delta) / 0.045));
+                totalSweep += delta;
+                lastAngle = newAngle;
+                compassState.angle = newAngle;
+
                 if (compassState.activeArc) {
-                    const pts = compassState.activeArc.points;
-                    for (let s = 1; s <= steps; s++) {
-                        const interpAngle = lastAngle + (delta * s) / steps;
-                        const px = Math.round(compassState.cx + Math.cos(interpAngle) * lockedRadius);
-                        const py = Math.round(compassState.cy + Math.sin(interpAngle) * lockedRadius);
-                        pts.push(clampCoordsToStudentZone(px, py, 4, 4));
-                    }
+                    compassState.activeArc.sweepAngle = totalSweep;
+                    compassState.activeArc.isFullCircle = Math.abs(totalSweep) >= Math.PI * 1.94;
                     currentVector = compassState.activeArc;
                     renderVectorPreview();
                 }
 
-                totalSweep += delta;
-                lastAngle = newAngle;
-                compassState.angle = newAngle;
                 renderCompassOverlay();
             };
 
@@ -1962,11 +1959,8 @@
                 const previewLayer = document.getElementById('vector-preview-layer');
                 if (previewLayer) previewLayer.innerHTML = '';
 
-                if (arc && arc.points.length > 2) {
-                    // Chiude perfettamente il cerchio se la rotazione supera i ~345°
-                    if (Math.abs(totalSweep) >= Math.PI * 1.92) {
-                        arc.points.push({ ...arc.points[0] });
-                    }
+                if (arc && Math.abs(arc.sweepAngle) > 0.03) {
+                    arc.isFullCircle = Math.abs(arc.sweepAngle) >= Math.PI * 1.94;
                     const activeBoardKey = getActiveBoardKey();
                     getActiveBoardStore().vectors.push(arc);
                     sendToHost({ type: 'ADD_VECTOR', boardKey: activeBoardKey, payload: arc });
@@ -1988,13 +1982,9 @@
                 lastAngle = compassState.angle;
                 totalSweep = 0;
 
-                const startX = Math.round(compassState.cx + Math.cos(compassState.angle) * lockedRadius);
-                const startY = Math.round(compassState.cy + Math.sin(compassState.angle) * lockedRadius);
-                const clampedStart = clampCoordsToStudentZone(startX, startY, 4, 4);
-
                 compassState.activeArc = {
                     id: 'vec-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
-                    type: 'pen',
+                    type: 'arc',
                     isHighlighter: false,
                     shapeType: null,
                     color: state.strokeColor,
@@ -2002,9 +1992,12 @@
                     authorId: state.userId,
                     lockedByTeacher: state.role === 'teacher',
                     group: state.myGroup || null,
-                    points: [clampedStart],
-                    x1: clampedStart.x, y1: clampedStart.y,
-                    x2: clampedStart.x, y2: clampedStart.y
+                    cx: compassState.cx,
+                    cy: compassState.cy,
+                    radius: lockedRadius,
+                    startAngle: compassState.angle,
+                    sweepAngle: 0,
+                    isFullCircle: false
                 };
 
                 window.addEventListener('mousemove', onMove);
@@ -2023,18 +2016,10 @@
                 return;
             }
             const { cx, cy, radius } = compassState;
-            const steps = 72;
-            const points = [];
-            for (let i = 0; i <= steps; i++) {
-                const a = (i / steps) * Math.PI * 2;
-                const px = Math.round(cx + Math.cos(a) * radius);
-                const py = Math.round(cy + Math.sin(a) * radius);
-                points.push(clampCoordsToStudentZone(px, py, 4, 4));
-            }
 
             const circleVec = {
                 id: 'vec-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
-                type: 'pen',
+                type: 'arc',
                 isHighlighter: false,
                 shapeType: null,
                 color: state.strokeColor,
@@ -2042,9 +2027,12 @@
                 authorId: state.userId,
                 lockedByTeacher: state.role === 'teacher',
                 group: state.myGroup || null,
-                points,
-                x1: points[0].x, y1: points[0].y,
-                x2: points[0].x, y2: points[0].y
+                cx,
+                cy,
+                radius,
+                startAngle: 0,
+                sweepAngle: Math.PI * 2,
+                isFullCircle: true
             };
 
             const activeBoardKey = getActiveBoardKey();
@@ -2064,6 +2052,7 @@
                     btn.className = 'swidth-btn w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center cursor-pointer';
                 }
             });
+            if (state.activeTool === 'compass') renderCompassOverlay();
         }
 
         function selectShapeType(shapeType) {
@@ -2119,7 +2108,12 @@
             for (const vec of activeVectors) {
                 if (state.role !== 'teacher' && (vec.lockedByTeacher || vec.authorId !== state.userId)) continue;
                 let hit = false;
-                if (vec.type === 'pen' && Array.isArray(vec.points)) {
+                if (vec.type === 'arc') {
+                    const distFromCenter = Math.hypot(pt.x - vec.cx, pt.y - vec.cy);
+                    if (Math.abs(distFromCenter - vec.radius) <= threshold) {
+                        hit = true;
+                    }
+                } else if (vec.type === 'pen' && Array.isArray(vec.points)) {
                     for (let i = 0; i < vec.points.length - 1; i++) {
                         if (distToSegment(pt.x, pt.y, vec.points[i].x, vec.points[i].y, vec.points[i + 1].x, vec.points[i + 1].y) <= threshold) {
                             hit = true;
@@ -2293,7 +2287,6 @@
                     const dx = pt.x - currentVector.x1;
                     const dy = pt.y - currentVector.y1;
                     if (currentVector.type === 'arrow') {
-                        // Aggancia la freccia agli angoli multipli di 45°
                         const angle = Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) * (Math.PI / 4);
                         const len = Math.hypot(dx, dy);
                         const snapped = clampCoordsToStudentZone(
@@ -2304,7 +2297,6 @@
                         currentVector.x2 = snapped.x;
                         currentVector.y2 = snapped.y;
                     } else {
-                        // Mantiene proporzioni 1:1 (quadrato perfetto, cerchio perfetto, ecc.)
                         const side = Math.max(Math.abs(dx), Math.abs(dy));
                         const snapped = clampCoordsToStudentZone(
                             currentVector.x1 + (dx >= 0 ? side : -side),
@@ -2344,8 +2336,6 @@
                     sendToHost({ type: 'ADD_VECTOR', boardKey: activeBoardKey, payload: currentVector });
                     if (state.role === 'teacher') broadcastState();
 
-                    // Dopo aver tracciato una forma o una freccia, torna subito al puntatore
-                    // così puoi spostarla, ruotarla o cancellarla immediatamente
                     if (createdType === 'shape' || createdType === 'arrow' || createdType === 'pen') {
                         setActiveTool('select');
                     } else {
@@ -2366,7 +2356,6 @@
             window.addEventListener('touchmove', onPointerMove, { passive: false });
             window.addEventListener('touchend', onPointerUp);
 
-            // Invio fluido della posizione del puntatore dello studente al docente
             const sendStudentCursor = (e) => {
                 if (state.role !== 'student') return;
                 const now = Date.now();
@@ -2410,6 +2399,44 @@
                     </g>
                 `;
             };
+
+            if (vec.type === 'arc') {
+                const cx = Number(vec.cx) || 0;
+                const cy = Number(vec.cy) || 0;
+                const r = Math.max(5, Number(vec.radius) || 50);
+                const sweep = Number(vec.sweepAngle) || 0;
+                const isFull = Boolean(vec.isFullCircle) || Math.abs(sweep) >= Math.PI * 1.94;
+
+                if (isFull) {
+                    return `
+                        <g class="vector-item" ${deleteAttr} ${opacityAttr} ${getRotTransform(cx, cy)}>
+                            <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="transparent" stroke-width="${hitSw}" />
+                            <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${hex}" stroke-width="${sw}" />
+                            ${renderEraseBadge(cx + r, cy)}
+                        </g>
+                    `;
+                }
+
+                const startA = Number(vec.startAngle) || 0;
+                const clampedSweep = Math.max(-Math.PI * 1.98, Math.min(Math.PI * 1.98, sweep));
+                const endA = startA + clampedSweep;
+                const x1 = (cx + Math.cos(startA) * r).toFixed(2);
+                const y1 = (cy + Math.sin(startA) * r).toFixed(2);
+                const x2 = (cx + Math.cos(endA) * r).toFixed(2);
+                const y2 = (cy + Math.sin(endA) * r).toFixed(2);
+                const largeArcFlag = Math.abs(clampedSweep) > Math.PI ? 1 : 0;
+                const sweepFlag = clampedSweep >= 0 ? 1 : 0;
+                const d = `M ${x1} ${y1} A ${r} ${r} 0 ${largeArcFlag} ${sweepFlag} ${x2} ${y2}`;
+                const midA = startA + clampedSweep / 2;
+
+                return `
+                    <g class="vector-item" ${deleteAttr} ${opacityAttr} ${getRotTransform(cx, cy)}>
+                        <path d="${d}" fill="none" stroke="transparent" stroke-width="${hitSw}" stroke-linecap="round" />
+                        <path d="${d}" fill="none" stroke="${hex}" stroke-width="${sw}" stroke-linecap="round" />
+                        ${renderEraseBadge(Math.round(cx + Math.cos(midA) * r), Math.round(cy + Math.sin(midA) * r))}
+                    </g>
+                `;
+            }
 
             if (vec.type === 'pen') {
                 const pts = vec.points.map(p => `${p.x},${p.y}`).join(' ');
@@ -2497,14 +2524,13 @@
             const chipsBox = document.getElementById('eraser-list-chips');
             if (!itemsLayer) return;
 
-            // Rimuovi eventuali vecchie maniglie
             itemsLayer.querySelectorAll('.vector-hover-zone, .vector-eraser-btn').forEach(el => el.remove());
             if (chipsBox) chipsBox.innerHTML = '';
 
             const canDelete = state.role === 'teacher' || !state.isFrozen;
             if (!canDelete) return;
 
-            const typeLabels = { pen: 'Tratto', arrow: 'Freccia', shape: 'Riquadro' };
+            const typeLabels = { pen: 'Tratto', arrow: 'Freccia', shape: 'Riquadro', arc: 'Cerchio / Arco' };
             const isEraserMode = state.activeTool === 'eraser';
             const isSelectOrEraser = state.activeTool === 'select' || isEraserMode;
             const activeVectors = getActiveBoardStore().vectors;
@@ -2516,14 +2542,23 @@
                 let minX = 0, minY = 0, maxX = 0, maxY = 0;
                 let bx = 60, by = 60;
 
-                if (vec.type === 'pen' && Array.isArray(vec.points) && vec.points.length > 0) {
+                if (vec.type === 'arc') {
+                    const cx = Number(vec.cx) || 0;
+                    const cy = Number(vec.cy) || 0;
+                    const r = Number(vec.radius) || 50;
+                    minX = cx - r;
+                    maxX = cx + r;
+                    minY = cy - r;
+                    maxY = cy + r;
+                    bx = maxX;
+                    by = minY;
+                } else if (vec.type === 'pen' && Array.isArray(vec.points) && vec.points.length > 0) {
                     const xs = vec.points.map(p => Number(p.x) || 0);
                     const ys = vec.points.map(p => Number(p.y) || 0);
                     minX = Math.min(...xs);
                     maxX = Math.max(...xs);
                     minY = Math.min(...ys);
                     maxY = Math.max(...ys);
-                    // Angolo in alto a destra del disegno a mano libera
                     bx = maxX;
                     by = minY;
                 } else if (vec.type === 'arrow') {
@@ -2533,7 +2568,6 @@
                     maxX = Math.max(x1, x2);
                     minY = Math.min(y1, y2);
                     maxY = Math.max(y1, y2);
-                    // Punta o angolo superiore destro della freccia
                     bx = x2;
                     by = y2;
                 } else if (vec.type === 'shape') {
@@ -2543,12 +2577,10 @@
                     maxX = Math.max(x1, x2);
                     minY = Math.min(y1, y2);
                     maxY = Math.max(y1, y2);
-                    // Angolo in alto a destra del riquadro
                     bx = maxX;
                     by = minY;
                 }
 
-                // Zona hover trasparente attorno al disegno/riquadro/freccia (attiva in modalità Selezione e Gomma)
                 const zone = document.createElement('div');
                 zone.className = `vector-hover-zone absolute group ${isSelectOrEraser ? 'pointer-events-auto' : 'pointer-events-none'} ${state.activeTool === 'select' ? 'cursor-grab hover:ring-2 hover:ring-indigo-400/50 hover:bg-indigo-500/5 rounded-xl' : ''}`;
                 const pad = 14;
@@ -2569,7 +2601,6 @@
                     attachVectorDragHandlers(zone, vec);
                 }
 
-                // Maniglia di rotazione in alto al centro (visibile al passaggio del mouse)
                 if (state.activeTool === 'select') {
                     const rotBtn = document.createElement('button');
                     rotBtn.type = 'button';
@@ -2582,7 +2613,6 @@
 
                 const btn = document.createElement('button');
                 btn.type = 'button';
-                // Piccola x rossa nell'angolo: visibile solo al passaggio del mouse (group-hover:opacity-100), o sempre se è attiva la Gomma
                 btn.className = `vector-eraser-btn pointer-events-auto absolute w-5 h-5 rounded-full bg-rose-600 hover:bg-rose-700 active:scale-90 text-white font-bold text-xs shadow-md border border-white flex items-center justify-center cursor-pointer transition-opacity ${isEraserMode ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`;
                 btn.style.left = `${Math.max(0, bx - zLeft - 10)}px`;
                 btn.style.top = `${Math.max(0, by - zTop - 10)}px`;
@@ -2632,6 +2662,9 @@
                         x: Math.max(0, Math.min(3000, p.x + dx)),
                         y: Math.max(0, Math.min(2000, p.y + dy))
                     }));
+                } else if (vec.type === 'arc') {
+                    vec.cx = Math.max(0, Math.min(3000, origX1 + dx));
+                    vec.cy = Math.max(0, Math.min(2000, origY1 + dy));
                 } else {
                     vec.x1 = Math.max(0, Math.min(3000, origX1 + dx));
                     vec.y1 = Math.max(0, Math.min(2000, origY1 + dy));
@@ -2669,6 +2702,8 @@
                         payload: {
                             id: vec.id,
                             points: vec.points,
+                            cx: vec.cx,
+                            cy: vec.cy,
                             x1: vec.x1,
                             y1: vec.y1,
                             x2: vec.x2,
@@ -2697,6 +2732,9 @@
 
                 if (vec.type === 'pen' && Array.isArray(vec.points)) {
                     origPoints = vec.points.map(p => ({ x: p.x, y: p.y }));
+                } else if (vec.type === 'arc') {
+                    origX1 = vec.cx;
+                    origY1 = vec.cy;
                 } else {
                     origX1 = vec.x1;
                     origY1 = vec.y1;
@@ -2727,7 +2765,6 @@
                 const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
                 let angle = Math.round(Math.atan2(clientY - cy, clientX - cx) * (180 / Math.PI) + 90);
-                // Calamita leggera sugli angoli dritti (0°, 90°, 180°, -90°)
                 for (const snap of [0, 90, 180, -90, -180, 270]) {
                     if (Math.abs(angle - snap) <= 4) { angle = snap; break; }
                 }
@@ -2758,6 +2795,8 @@
                         payload: {
                             id: vec.id,
                             points: vec.points,
+                            cx: vec.cx,
+                            cy: vec.cy,
                             x1: vec.x1,
                             y1: vec.y1,
                             x2: vec.x2,
@@ -2903,7 +2942,6 @@
             const itemW = data.width || (type === 'image' ? 280 : (type === 'note' ? 225 : 140));
             const itemH = data.height || (type === 'note' ? 150 : 80);
 
-            // Se lo studente è in un gruppo, posiziona il nuovo elemento direttamente al centro del suo riquadro!
             if (state.role !== 'teacher' && state.teamCount > 0 && state.myGroup) {
                 if (state.groupSpaceMode === 'shared') {
                     const z = getGroupZoneBounds(state.myGroup, state.teamCount);
@@ -3240,7 +3278,6 @@
                     item.width = newWidth;
                     element.style.width = `${newWidth}px`;
                 } else if (e.shiftKey) {
-                    // Mantiene le proporzioni originali del post-it premendo Shift
                     const ratio = startHeight / Math.max(1, startWidth);
                     const newWidth = Math.max(170, Math.min(650, Math.round(startWidth + dx)));
                     const newHeight = Math.max(120, Math.min(550, Math.round(newWidth * ratio)));
@@ -3544,7 +3581,6 @@
                 `;
             };
 
-            // Nelle stanze separate lo studente lavora in una lavagna privata tutta sua senza riquadri degli altri gruppi
             if (state.role !== 'teacher' && state.teamCount > 0 && state.groupSpaceMode === 'separate' && state.myGroup) {
                 const myThemeMap = {
                     1: { key: 'q1', color: 'amber', title: '🟡 Stanza Privata • Gruppo 1 (Giallo)' },
@@ -3803,7 +3839,6 @@
         function mergeGroupsIntoMainBoard() {
             if (state.role !== 'teacher') return;
 
-            // Calcola automaticamente il numero di gruppi reali (usando sia teamCount sia gli studenti assegnati o le stanze piene)
             let maxGroupFound = state.teamCount || 0;
             Object.values(connectedStudents).forEach(s => {
                 if (s && s.group && s.group > maxGroupFound) maxGroupFound = s.group;
@@ -3819,7 +3854,6 @@
 
             const groupColors = { g1: 'yellow', g2: 'blue', g3: 'pink', g4: 'green' };
 
-            // 1. Imposta automaticamente il layout a 2, 3 o 4 riquadri colorati sulla Lavagna Comune
             applyGroupZonesTemplate(activeGroups);
 
             let copiedCount = 0;
@@ -3834,7 +3868,6 @@
                 const newVecs = gb.vectors.filter(vc => !state.vectors.some(ex => ex.id === vc.id));
                 if (newItems.length === 0 && newVecs.length === 0) continue;
 
-                // Calcola l'ingombro originale (bounding box) del gruppo per mapparlo proporzionalmente nel suo riquadro
                 let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
                 newItems.forEach(it => {
                     const iw = it.width || 225;
@@ -3845,7 +3878,12 @@
                     maxY = Math.max(maxY, it.y + ih);
                 });
                 newVecs.forEach(vc => {
-                    if (vc.type === 'pen' && Array.isArray(vc.points)) {
+                    if (vc.type === 'arc') {
+                        minX = Math.min(minX, vc.cx - vc.radius);
+                        minY = Math.min(minY, vc.cy - vc.radius);
+                        maxX = Math.max(maxX, vc.cx + vc.radius);
+                        maxY = Math.max(maxY, vc.cy + vc.radius);
+                    } else if (vc.type === 'pen' && Array.isArray(vc.points)) {
                         vc.points.forEach(p => {
                             minX = Math.min(minX, p.x);
                             minY = Math.min(minY, p.y);
@@ -3886,7 +3924,14 @@
                 });
 
                 newVecs.forEach(vec => {
-                    if (vec.type === 'pen' && Array.isArray(vec.points)) {
+                    if (vec.type === 'arc') {
+                        state.vectors.push({
+                            ...vec,
+                            cx: Math.round(z.innerX + (vec.cx - minX) * scale),
+                            cy: Math.round(z.innerY + (vec.cy - minY) * scale),
+                            radius: Math.max(10, Math.round(vec.radius * scale))
+                        });
+                    } else if (vec.type === 'pen' && Array.isArray(vec.points)) {
                         state.vectors.push({
                             ...vec,
                             points: vec.points.map(p => ({
@@ -4392,50 +4437,37 @@
             toast.className = `${colors[type] || colors.info} px-4 py-2.5 rounded-2xl shadow-lg text-xs sm:text-sm font-bold transition-all duration-300`;
             toast.textContent = message;
             box.appendChild(toast);
-
             setTimeout(() => {
                 toast.style.opacity = '0';
                 setTimeout(() => toast.remove(), 300);
-            }, 3000);
+            }, 3200);
         }
 
-        function escapeHtml(str) {
-            return String(str || '')
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;');
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
         }
 
-        // ---------------- INIZIALIZZAZIONE ----------------
-        window.addEventListener('beforeunload', (e) => {
-            if (state.roomCode) {
-                persistSessionSnapshot();
-                e.preventDefault();
-                e.returnValue = '';
-            }
-        });
+        // ---------------- AVVIO ----------------
+        window.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            initCanvasInteractions();
+            initZoomGestures();
+            checkSavedSessionOnBoot();
 
-        window.onload = function () {
             const params = new URLSearchParams(window.location.search);
             const roomParam = params.get('room');
             if (roomParam) {
                 document.getElementById('input-room-code').value = roomParam.toUpperCase();
+                selectRole('student');
             }
-            if (params.has('docente')) {
-                hasTeacherUrlKey = true;
-                const btnTeacher = document.getElementById('btn-role-teacher');
-                if (btnTeacher) {
-                    btnTeacher.classList.remove('hidden');
-                    btnTeacher.classList.add('flex');
-                }
-                selectRole('teacher');
+            const docenteParam = params.get('docente');
+            if (docenteParam === '1' || docenteParam === 'cpia2025') {
+                if (docenteParam === 'cpia2025') hasTeacherUrlKey = true;
+                unlockTeacherLogin();
             }
-            checkSavedSessionOnBoot();
-            initCanvasInteractions();
-            initZoomGestures();
-            lucide.createIcons();
-        };
+        });
     </script>
 </body>
 </html>
